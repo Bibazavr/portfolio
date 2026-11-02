@@ -436,6 +436,15 @@ h4 {
 	font-size: 15px;
 }
 
+.leetcode {
+	margin-top: 16px;
+}
+
+.leetcode h3 {
+	margin: 0 0 4px;
+	font-size: 17px;
+}
+
 /* ---------- Apps ---------- */
 
 .app-card {

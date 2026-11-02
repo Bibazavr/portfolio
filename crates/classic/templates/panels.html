@@ -68,9 +68,12 @@
 {%- for (id, repo) in self.rails() %}
 <section class="panel" data-spot="{{ id }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="{{ id }}-{{ lang }}" hidden>
 	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
-	<p class="eyebrow">{{ self.t(p.ui.open_source) }} · {{ repo.language }}</p>
+	<p class="eyebrow">{{ self.t(p.ui.open_source) }} · {{ fmt.repo_language(repo) }}</p>
 	<h2 id="{{ id }}-{{ lang }}" class="repo-name">{{ repo.name }}</h2>
 	<p>{{ self.t(repo.description) }}</p>
+	{%- if let Some(numbers) = fmt.repo_numbers(repo) %}
+	<p class="meta">{{ numbers }}</p>
+	{%- endif %}
 	<ul class="links">
 		<li><a href="{{ repo.url }}" target="_blank" rel="noopener">{{ self.t(p.ui.source) }}</a></li>
 		{%- if let Some(demo) = repo.demo %}
@@ -101,6 +104,12 @@
 	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
 	<h2 id="stairs-{{ lang }}">{{ self.t(p.plaza.stairs_title) }}</h2>
 	<p>{{ self.t(p.plaza.stairs_body) }}</p>
+	{%- if let Some(solved) = fmt.leetcode_solved() %}
+	<p class="stat">{{ solved }}</p>
+	{%- if let Some(details) = fmt.leetcode_details() %}
+	<p class="meta">{{ details }}</p>
+	{%- endif %}
+	{%- endif %}
 	<ul class="links">
 		<li><a href="{{ self.leetcode().url }}" target="_blank" rel="noopener">{{ self.t(self.leetcode().label) }}</a></li>
 		<li><a href="{{ self.stairs_repo().url }}" target="_blank" rel="noopener">{{ self.stairs_repo().name }}</a></li>

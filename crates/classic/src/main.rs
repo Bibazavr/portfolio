@@ -15,7 +15,7 @@ use std::{
 };
 
 use askama::Template;
-use content::Lang;
+use content::{Lang, Stats};
 
 use pages::{ClassicPage, NotFoundPage, PlazaShell, RedirectPage};
 
@@ -48,6 +48,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         );
     }
 
+    let stats = Stats::read(&root.join("content/stats.json")).unwrap_or_else(|e| {
+        eprintln!("warning: {e}; leaving the stats out");
+        None
+    });
+
     let builds = plaza_builds(&out)?;
     let plaza = !builds.is_empty();
 
@@ -55,7 +60,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let dir = out.join(pages::classic_path(lang).trim_start_matches('/'));
         write(
             &dir.join("index.html"),
-            &ClassicPage::new(&portfolio, lang, cv, plaza).render()?,
+            &ClassicPage::new(&portfolio, lang, cv, plaza, stats.as_ref()).render()?,
         )?;
     }
     write(
@@ -64,7 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
     let home = if plaza {
         let version = build_version(&out, &builds)?;
-        PlazaShell::new(&portfolio, builds, version, cv)?.render()?
+        PlazaShell::new(&portfolio, builds, version, cv, stats.as_ref())?.render()?
     } else {
         eprintln!("warning: no plaza build in dist/plaza/, so / forwards to the classic page");
         RedirectPage::new(&portfolio).render()?

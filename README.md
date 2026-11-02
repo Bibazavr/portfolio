@@ -34,6 +34,19 @@ that spot's panel. The panels are plain HTML generated from `portfolio.ron` at b
 readers work as usual. Spot and panel names come from `content::Spot`, so both sides agree.
 The touch stick is HTML too and passes its position to Bevy through the WASM export `set_stick`.
 
+## Live stats
+
+`content/stats.json` holds GitHub stars, forks and language for the `open_source` repos and
+LeetCode solved counts (plus contest rating, once there is one). `scripts/update-stats.mjs`
+(Node, no dependencies) refreshes it; `.github/workflows/stats.yml` runs it nightly and on demand,
+commits only when the numbers changed, and then calls the deploy workflow, since pushes made with
+`GITHUB_TOKEN` don't trigger other workflows. A failed fetch keeps the previous numbers. The script
+only reads `portfolio.ron`. Both views show whatever stats are there and leave out the rest.
+
+```bash
+node scripts/update-stats.mjs
+```
+
 ## Skating
 
 WASD or arrows to skate and Space to ollie; on touch screens, the stick and the ollie button.

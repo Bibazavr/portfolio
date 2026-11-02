@@ -158,7 +158,10 @@
 						<h3><a href="{{ repo.url }}">{{ repo.name }}</a></h3>
 						<p>{{ self.t(repo.description) }}</p>
 						<p class="repo-foot">
-							<span class="badge">{{ repo.language }}</span>
+							<span class="badge">{{ fmt.repo_language(repo) }}</span>
+							{%- if let Some(numbers) = fmt.repo_numbers(repo) %}
+							<span class="meta">{{ numbers }}</span>
+							{%- endif %}
 							{%- if let Some(demo) = repo.demo %}
 							<a href="{{ demo }}">{{ self.t(p.ui.demo) }}</a>
 							{%- endif %}
@@ -166,6 +169,16 @@
 					</li>
 					{%- endfor %}
 				</ul>
+				{%- if let Some(solved) = fmt.leetcode_solved() %}
+				<div class="card leetcode">
+					<h3>
+						{%- if let Some(url) = fmt.leetcode_url() %}<a href="{{ url }}">{{ solved }}</a>{% else %}{{ solved }}{% endif -%}
+					</h3>
+					{%- if let Some(details) = fmt.leetcode_details() %}
+					<p class="meta">{{ details }}</p>
+					{%- endif %}
+				</div>
+				{%- endif %}
 			</div>
 		</section>
 

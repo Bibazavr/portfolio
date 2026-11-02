@@ -4,12 +4,14 @@
 //! build time, and the plaza embeds the same file into its WASM binary.
 
 mod spots;
+mod stats;
 
 use std::fmt;
 
 use serde::Deserialize;
 
 pub use spots::{CareerStop, Spot};
+pub use stats::{LeetCodeStats, RepoStats, Solved, Stats};
 
 /// The raw RON source, embedded at compile time.
 pub const SOURCE: &str = include_str!("../../../content/portfolio.ron");
@@ -375,6 +377,13 @@ pub struct Ui {
     pub plaza: Text,
     /// Link to a repository's code.
     pub source: Text,
+    pub stars: Text,
+    pub forks: Text,
+    pub solved: Text,
+    pub easy: Text,
+    pub medium: Text,
+    pub hard: Text,
+    pub contest_rating: Text,
 }
 
 /// Text that only the plaza shows.

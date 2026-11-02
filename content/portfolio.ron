@@ -408,6 +408,14 @@
         to_resume: (en: "Go to the résumé", ru: "Перейти к резюме"),
         plaza: (en: "Skate plaza", ru: "Скейт-площадка"),
         source: (en: "Source code", ru: "Исходный код"),
+        // Labels for the numbers in content/stats.json, shown when they're there.
+        stars: (en: "Stars", ru: "Звёзды"),
+        forks: (en: "Forks", ru: "Форки"),
+        solved: (en: "Solved on LeetCode", ru: "Решено на LeetCode"),
+        easy: (en: "Easy", ru: "Лёгких"),
+        medium: (en: "Medium", ru: "Средних"),
+        hard: (en: "Hard", ru: "Сложных"),
+        contest_rating: (en: "Contest rating", ru: "Рейтинг в контестах"),
     ),
 
     // Text that only the plaza (/) shows.

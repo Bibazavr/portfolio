@@ -1,0 +1,37 @@
+{
+	"repos": {
+		"lad-tech/mobydick": {
+			"stars": 13,
+			"forks": 2,
+			"language": "TypeScript"
+		},
+		"lad-tech/eslint-config": {
+			"stars": 4,
+			"forks": 1,
+			"language": "JavaScript"
+		},
+		"lad-tech/check-deps-age": {
+			"stars": 0,
+			"forks": 0,
+			"language": "TypeScript"
+		},
+		"Bibazavr/leetcode-rust": {
+			"stars": 0,
+			"forks": 0,
+			"language": "Rust"
+		},
+		"Bibazavr/cuboid": {
+			"stars": 0,
+			"forks": 0,
+			"language": "Rust"
+		}
+	},
+	"leetcode": {
+		"solved": {
+			"all": 179,
+			"easy": 58,
+			"medium": 92,
+			"hard": 29
+		}
+	}
+}

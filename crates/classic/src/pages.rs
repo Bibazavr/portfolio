@@ -1,7 +1,7 @@
 use askama::Template;
 use content::{
     CareerStop, Education, Job, Lang, Link, LinkKind, Month, Portfolio, Project, ProjectKind, Repo,
-    Spot, Text,
+    Spot, Stats, Text,
 };
 use serde_json::json;
 
@@ -39,13 +39,19 @@ pub struct ClassicPage<'a> {
 // Askama passes method arguments by reference, but not consistently, so the
 // templates never pass a `Lang`: each page gets helpers for what it needs.
 impl<'a> ClassicPage<'a> {
-    pub fn new(p: &'a Portfolio, lang: Lang, cv: Option<&'a str>, plaza: bool) -> Self {
+    pub fn new(
+        p: &'a Portfolio,
+        lang: Lang,
+        cv: Option<&'a str>,
+        plaza: bool,
+        stats: Option<&'a Stats>,
+    ) -> Self {
         Self {
             p,
             lang,
             cv,
             plaza,
-            fmt: Fmt::new(p, lang),
+            fmt: Fmt::new(p, lang, stats),
             style: STYLE,
             json_ld: person_json_ld(p, lang),
         }
@@ -102,11 +108,71 @@ impl<'a> ClassicPage<'a> {
 pub struct Fmt<'a> {
     p: &'a Portfolio,
     lang: Lang,
+    /// From `content/stats.json`, when there is one.
+    stats: Option<&'a Stats>,
 }
 
 impl<'a> Fmt<'a> {
-    pub fn new(p: &'a Portfolio, lang: Lang) -> Self {
-        Self { p, lang }
+    pub fn new(p: &'a Portfolio, lang: Lang, stats: Option<&'a Stats>) -> Self {
+        Self { p, lang, stats }
+    }
+
+    /// The language GitHub reports, or the one in `portfolio.ron`.
+    fn repo_language(&self, repo: &Repo) -> String {
+        let live = self
+            .stats
+            .and_then(|stats| stats.repo(repo)?.language.clone());
+        live.unwrap_or_else(|| repo.language.clone())
+    }
+
+    /// "Stars 13 · Forks 2", leaving out zeros; `None` with nothing to show.
+    fn repo_numbers(&self, repo: &Repo) -> Option<String> {
+        let numbers = self.stats?.repo(repo)?;
+        let ui = &self.p.ui;
+        let parts: Vec<_> = [(&ui.stars, numbers.stars), (&ui.forks, numbers.forks)]
+            .into_iter()
+            .filter_map(|(label, count)| {
+                Some(format!(
+                    "{} {}",
+                    label.get(self.lang),
+                    count.filter(|&n| n > 0)?
+                ))
+            })
+            .collect();
+        (!parts.is_empty()).then(|| parts.join(" · "))
+    }
+
+    /// "Solved on LeetCode: 179".
+    fn leetcode_solved(&self) -> Option<String> {
+        let leetcode = self.stats?.leetcode.as_ref()?;
+        Some(format!(
+            "{}: {}",
+            self.p.ui.solved.get(self.lang),
+            leetcode.solved.all
+        ))
+    }
+
+    /// "Easy 58 · Medium 92 · Hard 29", then the contest rating if there is one.
+    fn leetcode_details(&self) -> Option<String> {
+        let leetcode = self.stats?.leetcode.as_ref()?;
+        let (ui, lang, solved) = (&self.p.ui, self.lang, &leetcode.solved);
+        let mut details = format!(
+            "{} {} · {} {} · {} {}",
+            ui.easy.get(lang),
+            solved.easy,
+            ui.medium.get(lang),
+            solved.medium,
+            ui.hard.get(lang),
+            solved.hard,
+        );
+        if let Some(rating) = leetcode.contest_rating {
+            details += &format!(" · {}: {rating}", ui.contest_rating.get(lang));
+        }
+        Some(details)
+    }
+
+    fn leetcode_url(&self) -> Option<&'a str> {
+        Some(self.p.identity.link(LinkKind::LeetCode)?.url.as_str())
     }
 
     fn job_period(&self, job: &Job) -> String {
@@ -236,12 +302,17 @@ pub struct Panels<'a> {
 }
 
 impl<'a> Panels<'a> {
-    pub fn new(p: &'a Portfolio, lang: Lang, cv: Option<&'a str>) -> Self {
+    pub fn new(
+        p: &'a Portfolio,
+        lang: Lang,
+        cv: Option<&'a str>,
+        stats: Option<&'a Stats>,
+    ) -> Self {
         Self {
             p,
             lang,
             cv,
-            fmt: Fmt::new(p, lang),
+            fmt: Fmt::new(p, lang, stats),
         }
     }
 
@@ -309,10 +380,11 @@ impl<'a> PlazaShell<'a> {
         builds: Vec<&'static str>,
         version: String,
         cv: Option<&'a str>,
+        stats: Option<&'a Stats>,
     ) -> askama::Result<Self> {
         let panels = Lang::ALL
             .iter()
-            .map(|&lang| Panels::new(p, lang, cv).render())
+            .map(|&lang| Panels::new(p, lang, cv, stats).render())
             .collect::<askama::Result<String>>()?;
         Ok(Self {
             p,
