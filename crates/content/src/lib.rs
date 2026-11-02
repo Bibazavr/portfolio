@@ -38,6 +38,10 @@ impl Lang {
         }
     }
 
+    pub fn from_code(code: &str) -> Option<Lang> {
+        Lang::ALL.into_iter().find(|lang| lang.code() == code)
+    }
+
     /// The language the toggle switches to.
     pub fn other(self) -> Lang {
         match self {
@@ -403,7 +407,8 @@ pub struct PlazaText {
     pub needs_js: Text,
     pub hint_keys: Text,
     pub hint_touch: Text,
-    pub close: Text,
+    /// The key that opens a link pad's link, shown on its button.
+    pub open_key: Text,
     pub stairs_title: Text,
     pub stairs_body: Text,
     /// `open_source` name of the repository shown on the stair set.

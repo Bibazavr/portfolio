@@ -60,14 +60,14 @@ pub struct Models {
     #[asset(path = "embedded://models/vehicle.glb#Scene0")]
     pub vehicle: Handle<WorldAsset>,
     // The character's animations, by their index in the pack.
-    #[asset(path = "embedded://models/character-skate-boy.glb#Animation1")]
-    pub idle: Handle<AnimationClip>,
-    #[asset(path = "embedded://models/character-skate-boy.glb#Animation4")]
-    pub jump: Handle<AnimationClip>,
-    #[asset(path = "embedded://models/character-skate-boy.glb#Animation5")]
-    pub fall: Handle<AnimationClip>,
     #[asset(path = "embedded://models/character-skate-boy.glb#Animation6")]
     pub crouch: Handle<AnimationClip>,
+    #[asset(path = "embedded://models/character-skate-boy.glb#Animation32")]
+    pub skate: Handle<AnimationClip>,
+    #[asset(path = "embedded://models/character-skate-boy.glb#Animation33")]
+    pub skate_stand: Handle<AnimationClip>,
+    #[asset(path = "embedded://models/character-skate-boy.glb#Animation34")]
+    pub skate_air: Handle<AnimationClip>,
 }
 
 /// Spawns a model that doesn't move. With a `collider`, colliders are built

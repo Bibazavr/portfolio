@@ -46,6 +46,8 @@ bevy = { version = "0.20.1", default-features = false, features = [
 ] }
 bevy_asset_loader = { version = "0.28.1", default-features = false }
 content.workspace = true
+# Turns the font's glyphs into meshes for the plaza's 3D text.
+meshtext = "0.3.2"
 # Compiles info and debug logging out of release builds: smaller, and no
 # source paths in the console.
 tracing = { version = "0.1.44", default-features = false, features = ["release_max_level_warn"] }

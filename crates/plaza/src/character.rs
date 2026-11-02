@@ -1,9 +1,13 @@
 //! What the skater looks like: Kenney's skater kid standing sideways on a
 //! board, leaning into the surface it rides, with an animation for each move.
+//! Kenney's skate animations stand side-on and look along the board, except
+//! the push, which faces forward; the kid turns between the two.
 
-use std::{f32::consts::FRAC_PI_2, time::Duration};
+use std::{
+    f32::consts::{FRAC_PI_2, PI},
+    time::Duration,
+};
 
-use avian3d::prelude::*;
 use bevy::{prelude::*, world_serialization::WorldInstanceReady};
 
 use crate::{
@@ -18,17 +22,31 @@ const SCALE: f32 = 1.5;
 const DECK: f32 = 0.16 * SCALE;
 /// How quickly the board leans into a new surface; higher is snappier.
 const TILT_RATE: f32 = 12.0;
+/// How quickly the kid turns forward to push and back; higher is snappier.
+const TURN_RATE: f32 = 14.0;
 const BLEND: Duration = Duration::from_millis(150);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Pose {
-    Idle,
-    Jump,
-    Fall,
-    Crouch,
+    Stand,
+    Push,
+    Air,
+    Grind,
 }
 
-const POSES: [Pose; 4] = [Pose::Idle, Pose::Jump, Pose::Fall, Pose::Crouch];
+const POSES: [Pose; 4] = [Pose::Stand, Pose::Push, Pose::Air, Pose::Grind];
+
+impl Pose {
+    /// Which way the kid faces, turned about Y from facing along the board.
+    fn facing(self) -> Quat {
+        match self {
+            // Kenney's kid faces +Z; the board's nose points −Z.
+            Pose::Push => Quat::from_rotation_y(PI),
+            // Side-on, so the head, turned to the kid's right, looks ahead.
+            _ => Quat::from_rotation_y(-FRAC_PI_2),
+        }
+    }
+}
 
 #[derive(Resource)]
 struct Poses {
@@ -50,13 +68,20 @@ impl Poses {
 #[derive(Component)]
 struct Rig;
 
+/// The kid's model, which turns to push.
+#[derive(Component)]
+struct Kid;
+
 /// The pose an animation player is in.
 #[derive(Component)]
 struct Current(Pose);
 
 pub fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Phase::Playing), spawn.after(skater::spawn))
-        .add_systems(Update, (lean, animate).run_if(in_state(Phase::Playing)));
+        .add_systems(
+            Update,
+            (lean, animate, turn).run_if(in_state(Phase::Playing)),
+        );
 }
 
 fn spawn(
@@ -66,10 +91,10 @@ fn spawn(
     skater: Single<Entity, With<Skater>>,
 ) {
     let clips = POSES.map(|pose| match pose {
-        Pose::Idle => models.idle.clone(),
-        Pose::Jump => models.jump.clone(),
-        Pose::Fall => models.fall.clone(),
-        Pose::Crouch => models.crouch.clone(),
+        Pose::Stand => models.skate_stand.clone(),
+        Pose::Push => models.skate.clone(),
+        Pose::Air => models.skate_air.clone(),
+        Pose::Grind => models.crouch.clone(),
     });
     let (graph, nodes) = AnimationGraph::from_clips(clips);
     commands.insert_resource(Poses {
@@ -90,12 +115,12 @@ fn spawn(
         Transform::from_scale(Vec3::splat(SCALE)),
         ChildOf(rig),
     ));
-    // Side-on to the direction of travel, like a skater stands.
     commands
         .spawn((
+            Kid,
             WorldAssetRoot(models.character.clone()),
             Transform::from_xyz(0.0, DECK, 0.0)
-                .with_rotation(Quat::from_rotation_y(FRAC_PI_2))
+                .with_rotation(Pose::Stand.facing())
                 .with_scale(Vec3::splat(SCALE)),
             ChildOf(rig),
         ))
@@ -113,19 +138,28 @@ fn start_animation(
         if let Ok(mut player) = players.get_mut(entity) {
             let mut transitions = AnimationTransitions::new();
             transitions
-                .play(&mut player, poses.node(Pose::Idle), Duration::ZERO)
+                .play(&mut player, poses.node(Pose::Stand), Duration::ZERO)
                 .repeat();
             commands.entity(entity).insert((
                 AnimationGraphHandle(poses.graph.clone()),
                 transitions,
-                Current(Pose::Idle),
+                Current(Pose::Stand),
             ));
         }
     }
 }
 
+fn pose(board: &Board) -> Pose {
+    match board.motion {
+        Motion::Rolling if board.pushing => Pose::Push,
+        Motion::Rolling => Pose::Stand,
+        Motion::Grinding(_) => Pose::Grind,
+        Motion::Air(_) => Pose::Air,
+    }
+}
+
 fn animate(
-    skater: Single<(&Board, &LinearVelocity), With<Skater>>,
+    board: Single<&Board, With<Skater>>,
     poses: Res<Poses>,
     mut players: Query<(
         &mut AnimationPlayer,
@@ -133,22 +167,25 @@ fn animate(
         &mut Current,
     )>,
 ) {
-    let (board, velocity) = *skater;
-    let pose = match board.motion {
-        Motion::Rolling => Pose::Idle,
-        Motion::Grinding(_) => Pose::Crouch,
-        Motion::Air(_) if velocity.y > 0.5 => Pose::Jump,
-        Motion::Air(_) => Pose::Fall,
-    };
+    let pose = pose(&board);
     for (mut player, mut transitions, mut current) in &mut players {
         if current.0 != pose {
             current.0 = pose;
-            let animation = transitions.play(&mut player, poses.node(pose), BLEND);
-            if pose != Pose::Jump {
-                animation.repeat();
-            }
+            transitions
+                .play(&mut player, poses.node(pose), BLEND)
+                .repeat();
         }
     }
+}
+
+/// Turns the kid forward to push and back side-on after.
+fn turn(
+    time: Res<Time>,
+    board: Single<&Board, With<Skater>>,
+    mut kid: Single<&mut Transform, With<Kid>>,
+) {
+    kid.rotation
+        .smooth_nudge(&pose(&board).facing(), TURN_RATE, time.delta_secs());
 }
 
 /// Leans the model to the surface while rolling, and levels it in the air.

@@ -12,8 +12,10 @@ mod loading;
 mod og_image;
 mod palette;
 mod plaza;
+mod signs;
 mod skater;
 mod spots;
+mod text_mesh;
 
 use avian3d::prelude::*;
 use bevy::{asset::AssetMetaCheck, prelude::*};
@@ -68,6 +70,7 @@ fn main() {
         plaza::plugin,
         skater::plugin,
         character::plugin,
+        signs::plugin,
         spots::plugin,
         feedback::plugin,
         camera::plugin,

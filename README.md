@@ -25,14 +25,26 @@ Bevy picks its renderer at compile time, so the plaza is built twice: `dist/plaz
 WebGPU, and falls back to WebGL2 if WebGPU fails while starting. `?renderer=webgl2` or
 `?renderer=webgpu` forces one, and `?lang=ru` forces the language.
 
-## Spots and panels
+## Words, pads and cards
 
-Each portfolio spot in the plaza (`crates/plaza/src/spots.rs`) is a trigger zone marked by a
-purple pad. Bevy reports the spot the skater is in through `window.plazaBridge`, and the page shows
-that spot's panel. The panels are plain HTML generated from `portfolio.ron` at build time
-(`crates/classic/templates/panels.html`), in both languages, so links, focus, Esc and screen
-readers work as usual. Spot and panel names come from `content::Spot`, so both sides agree.
-The touch stick is HTML too and passes its position to Bevy through the WASM export `set_stick`.
+The plaza writes about itself in the world, short and in the visitor's language: the name in solid
+letters the skater can knock over, titles and dates painted on the ground, boards at the spots.
+`crates/plaza/src/spots.rs` places them next to the props they belong to and `signs.rs` writes
+them, again whenever the page's language toggle calls the WASM export `set_lang`. The text is
+meshed from Rubik Bold (SIL OFL) with `meshtext`. The font file has its overlapping contours
+removed and is cut down to Latin and Cyrillic by `scripts/clean-font.py`; a test checks that every
+character in `portfolio.ron` has a glyph.
+
+Links sit on purple pads. While the skater is on one, Bevy offers the link through
+`window.plazaBridge` and the page shows it as a button that Enter (or a tap) opens.
+
+Each spot is also a trigger zone. Bevy reports the spot the skater is in, and the page shows that
+spot's panel: plain HTML generated from `portfolio.ron` (`crates/classic/templates/panels.html`),
+in both languages, announced to screen readers and shown to keyboard users who Tab into it. The
+career stops and the skill shop have more to say than fits on a sign, so their panels float as a
+card over the spot, at the point Bevy projects to the screen as the camera moves. Spot and panel
+names come from `content::Spot`, so both sides agree. The touch stick is HTML too and passes its
+position to Bevy through the WASM export `set_stick`.
 
 ## Live stats
 
@@ -50,7 +62,9 @@ node scripts/update-stats.mjs
 ## Skating
 
 WASD or arrows to skate and Space to ollie; on touch screens, the stick and the ollie button.
-The board rolls up ramps and back down fakie, gets air out of the halfpipe (turning around in the
+The skater turns forward to kick-push up to top speed, coasts a little, and pushes again; on
+narrow screens the camera trails farther back, and it comes in front of walls rather than lose the
+skater behind them. The board rolls up ramps and back down fakie, gets air out of the halfpipe (turning around in the
 air), and locks onto a rail when it comes down on one. Ollies, airs, gaps and grinds score points.
 Sound is synthesised in the page with Web Audio, so there are no audio files; it starts after the
 first tap or key press, as browsers require, and the speaker button mutes it.
@@ -59,7 +73,7 @@ first tap or key press, as browsers require, and the speaker button mutes it.
 
 Release builds are the plaza's WASM: `opt-level = "z"`, LTO, one codegen unit and stripped
 symbols, then `wasm-opt -Oz` (see `crates/plaza/index.html`), with only the Bevy features the plaza
-uses and info/debug logging compiled out. Each renderer's build is about 19 MB, 5.7 MB gzipped.
+uses and info/debug logging compiled out. Each renderer's build is about 19 MB, 5.8 MB gzipped.
 `build.sh` remaps local paths out of the binary.
 
 The page downloads the WASM itself to show real progress (the shell knows each build's size), then

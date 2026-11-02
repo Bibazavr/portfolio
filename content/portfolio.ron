@@ -439,9 +439,10 @@
         loading: (en: "Loading the plaza…", ru: "Загружаем площадку…"),
         load_failed: (en: "The plaza couldn't load in this browser. The classic view has everything.", ru: "Площадка не загрузилась в этом браузере. В классической версии есть всё то же самое."),
         needs_js: (en: "The skate plaza needs JavaScript and WebGL.", ru: "Для скейт-площадки нужны JavaScript и WebGL."),
-        hint_keys: (en: "WASD or arrow keys to skate, Space to ollie. Roll onto a purple pad to read about it.", ru: "WASD или стрелки — кататься, пробел — олли. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),
-        hint_touch: (en: "Stick to skate, button to ollie. Roll onto a purple pad to read about it.", ru: "Стик — кататься, кнопка — олли. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),
-        close: (en: "Close (Esc)", ru: "Закрыть (Esc)"),
+        hint_keys: (en: "WASD or arrow keys to skate, Space to ollie. Roll onto a purple pad and press Enter to open its link.", ru: "WASD или стрелки — кататься, пробел — олли. Заезжайте на фиолетовую площадку и нажмите Enter, чтобы открыть ссылку."),
+        hint_touch: (en: "Stick to skate, button to ollie. Roll onto a purple pad and tap the link that pops up.", ru: "Стик — кататься, кнопка — олли. Заезжайте на фиолетовую площадку и нажмите на появившуюся ссылку."),
+        // The key that opens a link pad's link, shown on its button.
+        open_key: "Enter",
         stairs_title: (en: "LeetCode, in Rust", ru: "LeetCode на Rust"),
         stairs_body: (
             en: "Rust is my favourite language. I solve LeetCode problems in it, and this plaza is written in it too: Bevy, compiled to WebAssembly.",

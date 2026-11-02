@@ -2,6 +2,9 @@
 //! frames the plaza from behind the start, renders it into a 1200×630 image
 //! (off-screen, so it doesn't matter whether the window is visible), saves it
 //! to `<path>` and exits. Native only; the README has the follow-up steps.
+//!
+//! `--camera x,y,z,tx,ty,tz` shoots from another point toward another target,
+//! which is handy for checking a part of the plaza without playing to it.
 
 use std::path::PathBuf;
 
@@ -25,7 +28,28 @@ const SETTLE_FRAMES: u32 = 90;
 struct Shot {
     path: PathBuf,
     image: Handle<Image>,
+    camera: Transform,
     frames: u32,
+}
+
+/// Behind and above the start, looking across the plaza toward the halfpipe.
+fn preview_camera() -> Transform {
+    Transform::from_xyz(-3.5, 4.0, 27.0).looking_at(Vec3::new(6.0, 0.8, 14.0), Vec3::Y)
+}
+
+/// The pose after `--camera`, as `x,y,z,tx,ty,tz`.
+fn requested_camera() -> Option<Transform> {
+    let mut args = std::env::args().skip_while(|arg| arg != "--camera");
+    args.next()?;
+    let numbers: Vec<f32> = args
+        .next()?
+        .split(',')
+        .map(|n| n.parse().ok())
+        .collect::<Option<_>>()?;
+    let [x, y, z, tx, ty, tz] = numbers[..] else {
+        return None;
+    };
+    Some(Transform::from_xyz(x, y, z).looking_at(Vec3::new(tx, ty, tz), Vec3::Y))
 }
 
 /// The path after `--og-image`, if the app was started to render the preview.
@@ -49,6 +73,7 @@ pub fn plugin(path: PathBuf) -> impl Fn(&mut App) {
         app.insert_resource(Shot {
             path: path.clone(),
             image,
+            camera: requested_camera().unwrap_or_else(preview_camera),
             frames: 0,
         })
         .add_systems(OnEnter(Phase::Playing), render_to_image)
@@ -78,8 +103,7 @@ fn frame_and_shoot(
     mut camera: Single<&mut Transform, With<Camera3d>>,
     mut exit: MessageWriter<AppExit>,
 ) {
-    // Behind and above the start, looking across the plaza toward the halfpipe.
-    **camera = Transform::from_xyz(-3.5, 4.0, 27.0).looking_at(Vec3::new(6.0, 0.8, 14.0), Vec3::Y);
+    **camera = shot.camera;
     shot.frames += 1;
     if shot.frames == SETTLE_FRAMES {
         commands

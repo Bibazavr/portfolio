@@ -19,6 +19,9 @@ const TOP_SPEED: f32 = 10.0;
 /// Ramps can take the skater past what pushing reaches.
 const MAX_SPEED: f32 = 13.0;
 const PUSH: f32 = 7.0;
+/// After reaching top speed the skater coasts until this much slower, then
+/// pushes again.
+const COAST: f32 = 1.0;
 const BRAKE: f32 = 12.0;
 const ROLLING_DRAG: f32 = 0.5;
 const TURN_RATE: f32 = 2.6;
@@ -45,6 +48,8 @@ pub struct Board {
     pub motion: Motion,
     /// The surface under the board, or the last one it touched.
     pub normal: Vec3,
+    /// Speeding up with a foot on the ground.
+    pub pushing: bool,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -217,6 +222,7 @@ fn skate(
         .with_y(0.0)
         .normalize_or(Vec3::NEG_Z);
 
+    let was_pushing = std::mem::take(&mut board.pushing);
     board.motion = match board.motion {
         Motion::Rolling => match ground {
             // Rolled off an edge or over a lip.
@@ -233,7 +239,10 @@ fn skate(
                 // Speed is signed, so going up a ramp and back down is fakie.
                 let along = (forward - normal * forward.dot(normal)).normalize_or(forward);
                 let mut speed = velocity.dot(along);
-                if input.throttle > 0.0 && speed < TOP_SPEED {
+                board.pushing = input.throttle > 0.0
+                    && speed < TOP_SPEED
+                    && (was_pushing || speed < TOP_SPEED - COAST);
+                if board.pushing {
                     speed += input.throttle * PUSH * dt;
                 }
                 if input.throttle < 0.0 {

@@ -188,12 +188,7 @@ impl<'a> Fmt<'a> {
     }
 
     fn stop_period(&self, stop: &CareerStop) -> String {
-        match stop.project {
-            Some(project) => self
-                .project_period(stop.job, project)
-                .unwrap_or_else(|| self.job_period(stop.job)),
-            None => self.job_period(stop.job),
-        }
+        stop.period(self.p, self.lang)
     }
 
     /// A project without an end date ran until the job ended.
@@ -217,19 +212,7 @@ impl<'a> Fmt<'a> {
 
     /// "Oct 2025 – present", "2025 – 2026", or just "2026".
     fn period(&self, start: Month, end: Option<Month>) -> String {
-        let start_label = self.month(start);
-        match end {
-            Some(end) if end == start => start_label,
-            Some(end) => format!("{start_label} – {}", self.month(end)),
-            None => format!("{start_label} – {}", self.p.ui.present.get(self.lang)),
-        }
-    }
-
-    fn month(&self, m: Month) -> String {
-        match m.month {
-            Some(n) => format!("{} {}", self.p.ui.months.name(n, self.lang), m.year),
-            None => m.year.to_string(),
-        }
+        self.p.period(self.lang, start, end)
     }
 }
 

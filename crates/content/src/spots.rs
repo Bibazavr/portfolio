@@ -1,7 +1,7 @@
 //! The plaza's spots. Each one is a trigger zone in the plaza and a panel on
 //! the page, and both sides name the panel with [`Spot::id`].
 
-use crate::{Job, Month, Portfolio, Project, Repo};
+use crate::{Job, Lang, Month, Portfolio, Project, Repo};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Spot {
@@ -54,9 +54,34 @@ impl CareerStop<'_> {
             .and_then(|project| project.start)
             .unwrap_or(self.job.start)
     }
+
+    /// The project's dates, or its job's when it has none. A project without
+    /// an end date ran until the job ended.
+    pub fn period(&self, portfolio: &Portfolio, lang: Lang) -> String {
+        match self
+            .project
+            .and_then(|project| Some((project.start?, project.end)))
+        {
+            Some((start, end)) => portfolio.period(lang, start, end.or(self.job.end)),
+            None => portfolio.period(lang, self.job.start, self.job.end),
+        }
+    }
 }
 
 impl Portfolio {
+    /// "Oct 2025 – present", "2025 – 2026", or just "2026".
+    pub fn period(&self, lang: Lang, start: Month, end: Option<Month>) -> String {
+        let month = |m: Month| match m.month {
+            Some(n) => format!("{} {}", self.ui.months.name(n, lang), m.year),
+            None => m.year.to_string(),
+        };
+        match end {
+            Some(end) if end == start => month(start),
+            Some(end) => format!("{} – {}", month(start), month(end)),
+            None => format!("{} – {}", month(start), self.ui.present.get(lang)),
+        }
+    }
+
     /// The career line, oldest first.
     pub fn career(&self) -> Vec<CareerStop<'_>> {
         let mut stops: Vec<_> = self

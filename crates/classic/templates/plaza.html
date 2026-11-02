@@ -299,7 +299,53 @@
 			box-shadow: 0 4px 12px rgb(20 23 26 / 0.3);
 		}
 
-		/* Panels: a side card on wide screens, a sheet under the top bar on phones. */
+		/* The link pad the skater is on, as a button. Enter presses it. */
+		.open {
+			position: fixed;
+			z-index: 2;
+			left: 50%;
+			bottom: max(24px, env(safe-area-inset-bottom));
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			max-width: calc(100vw - 32px);
+			box-sizing: border-box;
+			padding: 12px 18px;
+			border-radius: 18px;
+			background: var(--accent);
+			box-shadow: 0 8px 24px rgb(20 23 26 / 0.3);
+			color: #fff;
+			font: 700 17px/1.2 var(--font);
+			text-decoration: none;
+			white-space: nowrap;
+			transform: translateX(-50%);
+		}
+
+		.open[hidden] {
+			display: none;
+		}
+
+		.open-label {
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.open kbd {
+			padding: 2px 8px;
+			border-radius: 8px;
+			background: rgb(255 255 255 / 0.2);
+			font: 600 13px/1.4 var(--font);
+		}
+
+		@media (pointer: coarse) {
+			.open {
+				bottom: calc(max(24px, env(safe-area-inset-bottom)) + 148px);
+			}
+		}
+
+		/* Panels: what a spot is about, for screen readers and keyboard users.
+		   Everyone else reads it in the plaza, so a panel only shows while focus
+		   is in it: a side card on wide screens, a sheet under the top bar on phones. */
 		.panel {
 			position: fixed;
 			z-index: 2;
@@ -328,17 +374,42 @@
 			}
 		}
 
-		.panel-close {
-			float: right;
-			width: 36px;
-			height: 36px;
-			margin: -8px -10px 4px 8px;
+		/* A card over its spot, above the point Bevy gives (or below it when
+		   there's no room above), kept on screen. */
+		.panel.card {
+			right: auto;
+			width: min(360px, calc(100vw - 24px));
+			max-height: min(46dvh, 460px);
+			padding: 16px 18px;
+			font-size: 15px;
+		}
+
+		.panel.card.wide {
+			width: min(720px, calc(100vw - 24px));
+			max-height: min(62dvh, 620px);
+		}
+
+		/* On phones the card is smaller, so the spot stays in view under it. */
+		@media (max-width: 640px) {
+			.panel.card {
+				max-height: 36dvh;
+				padding: 12px 16px;
+				font-size: 14px;
+			}
+
+			.panel.card h2 {
+				font-size: 19px;
+			}
+		}
+
+		.panel:not(:focus-within, .card) {
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			padding: 0;
 			border: 0;
-			border-radius: 50%;
-			background: #f1f2ed;
-			color: var(--text);
-			font: 22px/1 var(--font);
-			cursor: pointer;
+			clip-path: inset(50%);
+			white-space: nowrap;
 		}
 
 		.panel h2 {
@@ -704,6 +775,44 @@
 				renderSound();
 			});
 
+			// Panels. Bevy calls show/hide as the skater enters and leaves spots, and
+			// screen readers announce the new one. Showing one never moves focus, so
+			// the keyboard keeps steering; Tab moves into it and Esc back out.
+			let shownSpot = null;
+			function showPanel(spot) {
+				for (const panel of panels.children) {
+					panel.hidden = panel.dataset.spot !== spot;
+					panel.classList.remove('card');
+				}
+				if (!spot && panels.contains(document.activeElement)) canvas.focus();
+				shownSpot = spot;
+			}
+
+			// Cards: a panel marked data-card also floats over its spot, at the point
+			// Bevy gives as the camera moves, while that point is on screen.
+			let cardPoint = null;
+			function placeCard(x, y) {
+				cardPoint = { x, y };
+				const margin = 12;
+				const offScreen = x < 0 || y < 0 || x > innerWidth || y > innerHeight;
+				const topBar = document.querySelector('.top-bar').getBoundingClientRect().bottom;
+				for (const panel of panels.children) {
+					const card = !offScreen && panel.dataset.spot === shownSpot && 'card' in panel.dataset;
+					panel.classList.toggle('card', card);
+					if (!card || panel.dataset.lang !== root.lang) continue;
+					const { width, height } = panel.getBoundingClientRect();
+					const left = Math.min(Math.max(x - width / 2, margin), innerWidth - width - margin);
+					let top = y - height - 16;
+					if (top < topBar + margin) top = Math.min(y + 16, innerHeight - height - margin);
+					panel.style.left = `${left}px`;
+					panel.style.top = `${top}px`;
+				}
+			}
+			function unplaceCard() {
+				cardPoint = null;
+				for (const panel of panels.children) panel.classList.remove('card');
+			}
+
 			// Language: the page holds both, CSS shows the current one.
 			function setLang(lang) {
 				root.lang = lang;
@@ -711,24 +820,19 @@
 				classicLink.href = classicLink.dataset[`${lang}Href`];
 				canvas.setAttribute('aria-label', canvas.dataset[`${lang}Label`]);
 				renderSound();
+				// The other language's card has its own size.
+				if (cardPoint) placeCard(cardPoint.x, cardPoint.y);
 			}
 			setLang(root.lang);
 			document.getElementById('lang-toggle').addEventListener('click', () => {
 				const lang = root.lang === 'ru' ? 'en' : 'ru';
 				setLang(lang);
+				// The plaza rewrites its words.
+				plaza?.set_lang(lang);
 				params.set('lang', lang);
 				history.replaceState(null, '', `?${params}`);
 			});
 
-			// Panels. Bevy calls show/hide as the skater enters and leaves spots.
-			// Esc or ✕ closes a panel until the skater leaves that spot and comes back.
-			// Opening a panel never moves focus, so the keyboard keeps steering.
-			let openSpot = null;
-			function showPanel(spot) {
-				for (const panel of panels.children) panel.hidden = panel.dataset.spot !== spot;
-				if (!spot && panels.contains(document.activeElement)) canvas.focus();
-				openSpot = spot;
-			}
 			// Score: the total, and the last trick for a moment.
 			const trickNames = {{ self.tricks_json()|safe }};
 			const total = document.getElementById('score-total');
@@ -743,27 +847,52 @@
 				audio.play('trick');
 			}
 
+			// The hint goes away once the visitor starts skating.
+			const hideHint = () => hint.classList.add('done');
+			canvas.addEventListener('keydown', hideHint, { once: true });
+
+			// Link pads. While the skater is on one, Bevy offers its link as a button,
+			// labelled in the plaza's language, and Enter presses it.
+			const open = document.getElementById('open');
+			const openLabel = document.getElementById('open-label');
+			function offerLink(url, label) {
+				open.href = url;
+				// Mail links open the mail app; the rest open in a new tab.
+				if (url.startsWith('mailto:')) {
+					open.removeAttribute('target');
+				} else {
+					open.target = '_blank';
+				}
+				openLabel.textContent = label;
+				open.hidden = false;
+				hideHint();
+			}
+			function withdrawLink() {
+				if (document.activeElement === open) canvas.focus();
+				open.hidden = true;
+			}
+
 			window.plazaBridge = {
-				show: (spot) => showPanel(spot),
+				show: showPanel,
 				hide: () => showPanel(null),
+				place: placeCard,
+				unplace: unplaceCard,
+				link: offerLink,
+				unlink: withdrawLink,
+				lang: () => root.lang,
 				sound: (name) => audio.play(name),
 				motion: (speed, rolling, grinding) => audio.motion(speed, rolling, grinding),
 				trick: showTrick,
 			};
-			function dismiss() {
-				showPanel(null);
-				canvas.focus();
-			}
 			addEventListener('keydown', (event) => {
-				if (event.key === 'Escape' && openSpot) dismiss();
+				const steering = event.target === canvas || event.target === document.body;
+				if (event.key === 'Enter' && steering && !open.hidden) {
+					event.preventDefault();
+					open.click();
+				} else if (event.key === 'Escape' && panels.contains(document.activeElement)) {
+					canvas.focus();
+				}
 			});
-			panels.addEventListener('click', (event) => {
-				if (event.target.closest('.panel-close')) dismiss();
-			});
-
-			// The hint goes away once the visitor starts skating.
-			const hideHint = () => hint.classList.add('done');
-			canvas.addEventListener('keydown', hideHint, { once: true });
 
 			// Touch stick: up pushes, down brakes, sideways steers.
 			const stick = document.getElementById('stick');
@@ -940,6 +1069,11 @@
 	<button id="ollie" class="ollie" type="button" tabindex="-1" aria-hidden="true">
 		<span data-lang="en">{{ self.en(p.plaza.ollie) }}</span><span data-lang="ru" lang="ru">{{ self.ru(p.plaza.ollie) }}</span>
 	</button>
+
+	<a id="open" class="open" href="/" rel="noopener" hidden>
+		<span id="open-label" class="open-label"></span><span aria-hidden="true">↗</span>
+		<kbd class="hint-keys" aria-hidden="true"><span data-lang="en">{{ self.en(p.plaza.open_key) }}</span><span data-lang="ru">{{ self.ru(p.plaza.open_key) }}</span></kbd>
+	</a>
 
 	<div id="panels" aria-live="polite">
 		{{- panels|safe }}

@@ -1,10 +1,10 @@
 {#- One panel per plaza spot, in one language. The shell shows the panel whose
-    data-spot Bevy reports, and CSS hides the other language. -#}
+    data-spot Bevy reports, for screen readers and keyboard users; sighted
+    visitors read the plaza itself, plus the panels marked data-card, which
+    float as a card over their spot. CSS hides the other language. -#}
 {%- let lang = self.code() %}
-{%- let close = self.t(p.plaza.close) %}
 
 <section class="panel" data-spot="{{ self.id(content::Spot::Start) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="start-{{ lang }}" hidden>
-	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
 	<p class="eyebrow">{{ self.t(p.identity.location) }}</p>
 	<h2 id="start-{{ lang }}">{{ self.t(p.identity.name) }}</h2>
 	<p class="lede">{{ self.t(p.identity.title) }}</p>
@@ -23,8 +23,7 @@
 </section>
 
 {%- for (id, stop) in self.career() %}
-<section class="panel" data-spot="{{ id }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="{{ id }}-{{ lang }}" hidden>
-	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+<section class="panel" data-spot="{{ id }}" data-card data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="{{ id }}-{{ lang }}" hidden>
 	<p class="eyebrow">{{ self.t(stop.job.company) }} · {{ fmt.stop_period(stop) }}</p>
 	{%- if let Some(project) = stop.project %}
 	<h2 id="{{ id }}-{{ lang }}">{{ self.t(project.name) }}</h2>
@@ -53,7 +52,6 @@
 {%- endfor %}
 
 <section class="panel" data-spot="{{ self.id(content::Spot::Gap) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="gap-{{ lang }}" hidden>
-	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
 	<h2 id="gap-{{ lang }}">{{ self.t(p.ui.highlights) }}</h2>
 	<ol class="highlights">
 		{%- for highlight in p.highlights %}
@@ -67,7 +65,6 @@
 
 {%- for (id, repo) in self.rails() %}
 <section class="panel" data-spot="{{ id }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="{{ id }}-{{ lang }}" hidden>
-	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
 	<p class="eyebrow">{{ self.t(p.ui.open_source) }} · {{ fmt.repo_language(repo) }}</p>
 	<h2 id="{{ id }}-{{ lang }}" class="repo-name">{{ repo.name }}</h2>
 	<p>{{ self.t(repo.description) }}</p>
@@ -83,8 +80,7 @@
 </section>
 {%- endfor %}
 
-<section class="panel" data-spot="{{ self.id(content::Spot::SkillShop) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="skills-{{ lang }}" hidden>
-	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+<section class="panel wide" data-spot="{{ self.id(content::Spot::SkillShop) }}" data-card data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="skills-{{ lang }}" hidden>
 	<h2 id="skills-{{ lang }}">{{ self.t(p.ui.skills) }}</h2>
 	<div class="deck">
 		{%- for group in p.skills %}
@@ -101,7 +97,6 @@
 </section>
 
 <section class="panel" data-spot="{{ self.id(content::Spot::Stairs) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="stairs-{{ lang }}" hidden>
-	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
 	<h2 id="stairs-{{ lang }}">{{ self.t(p.plaza.stairs_title) }}</h2>
 	<p>{{ self.t(p.plaza.stairs_body) }}</p>
 	{%- if let Some(solved) = fmt.leetcode_solved() %}
@@ -117,7 +112,6 @@
 </section>
 
 <section class="panel" data-spot="{{ self.id(content::Spot::Billboard) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="billboard-{{ lang }}" hidden>
-	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
 	<p class="eyebrow">{{ self.t(p.ui.apps) }}</p>
 	{%- for app in p.apps %}
 	<div class="app">
@@ -144,7 +138,6 @@
 </section>
 
 <section class="panel" data-spot="{{ self.id(content::Spot::PhoneBooth) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="contact-{{ lang }}" hidden>
-	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
 	<h2 id="contact-{{ lang }}">{{ self.t(p.ui.contact) }}</h2>
 	<p class="email"><a href="mailto:{{ p.identity.email }}">{{ p.identity.email }}</a></p>
 	{%- if let Some(cv) = cv %}
@@ -158,7 +151,6 @@
 </section>
 
 <section class="panel" data-spot="{{ self.id(content::Spot::Sticker) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="sticker-{{ lang }}" hidden>
-	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
 	<h2 id="sticker-{{ lang }}">{{ self.t(p.plaza.egg_title) }}</h2>
 	<p>{{ self.t(p.plaza.egg_body) }}</p>
 	<ul class="links">
