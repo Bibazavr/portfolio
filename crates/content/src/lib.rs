@@ -396,6 +396,35 @@ pub struct PlazaText {
     pub stairs_repo: String,
     pub egg_title: Text,
     pub egg_body: Text,
+    /// The touch ollie button.
+    pub ollie: Text,
+    pub score: Text,
+    /// Labels for the mute button.
+    pub sound_off: Text,
+    pub sound_on: Text,
+    pub tricks: Tricks,
+}
+
+/// Names the score counter shows for each trick.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Tricks {
+    pub ollie: Text,
+    pub air: Text,
+    pub grind: Text,
+    pub gap: Text,
+}
+
+impl Tricks {
+    /// Each trick's name, keyed by the id the plaza reports it with.
+    pub fn all(&self) -> [(&'static str, &Text); 4] {
+        [
+            ("ollie", &self.ollie),
+            ("air", &self.air),
+            ("grind", &self.grind),
+            ("gap", &self.gap),
+        ]
+    }
 }
 
 #[cfg(test)]

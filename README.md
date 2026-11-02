@@ -12,6 +12,7 @@ Portfolio of Kirill Lebedev (Bibazavr), in two views built from one content file
 | `content/portfolio.ron` | Everything a visitor reads, in EN and RU. Edit content here only. |
 | `crates/content` | Serde model for `portfolio.ron`, shared by both views. Its tests check the file parses. |
 | `crates/plaza` | The Bevy plaza. `index.html` there is only a dev page for `trunk serve`. |
+| `crates/plaza/assets/models` | Models from Kenney's Mini Skate pack (CC0), with the palette texture recoloured to the studio purple. They're embedded in the WASM. |
 | `crates/classic` | Generates the classic page, the plaza's shell page at `/`, 404, sitemap and robots.txt. |
 | `static/` | Copied to the site root as-is: CNAME, favicon, CV, images. |
 | `build.sh` | Builds everything into `dist/`; CI runs the same steps. |
@@ -33,6 +34,14 @@ that spot's panel. The panels are plain HTML generated from `portfolio.ron` at b
 readers work as usual. Spot and panel names come from `content::Spot`, so both sides agree.
 The touch stick is HTML too and passes its position to Bevy through the WASM export `set_stick`.
 
+## Skating
+
+WASD or arrows to skate and Space to ollie; on touch screens, the stick and the ollie button.
+The board rolls up ramps and back down fakie, gets air out of the halfpipe (turning around in the
+air), and locks onto a rail when it comes down on one. Ollies, airs, gaps and grinds score points.
+Sound is synthesised in the page with Web Audio, so there are no audio files; it starts after the
+first tap or key press, as browsers require, and the speaker button mutes it.
+
 ## Run locally
 
 Needs Rust, the `wasm32-unknown-unknown` target and [trunk](https://trunkrs.dev).
@@ -50,6 +59,10 @@ serves the dev page on port 8081, and `cargo run -p plaza` opens a native window
 Text is either a plain string, shown as-is in every language, or `(en: "...", ru: "...")`.
 Dates are `"YYYY-MM"`, or `"YYYY"` when the month isn't known. A job or project
 without an `end` is ongoing; a project with a `start` and no `end` ran until its job ended.
+
+## Credits
+
+3D models: [Mini Skate](https://kenney.nl/assets/mini-skate) by Kenney, CC0.
 
 ## Deploy setup
 

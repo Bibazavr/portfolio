@@ -416,8 +416,8 @@
         classic_view: (en: "Classic view", ru: "Классическая версия"),
         loading: (en: "Loading the plaza…", ru: "Загружаем площадку…"),
         needs_js: (en: "The skate plaza needs JavaScript and WebGL.", ru: "Для скейт-площадки нужны JavaScript и WebGL."),
-        hint_keys: (en: "WASD or arrow keys to skate. Roll onto a purple pad to read about it.", ru: "WASD или стрелки — кататься. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),
-        hint_touch: (en: "Use the stick to skate. Roll onto a purple pad to read about it.", ru: "Стик — кататься. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),
+        hint_keys: (en: "WASD or arrow keys to skate, Space to ollie. Roll onto a purple pad to read about it.", ru: "WASD или стрелки — кататься, пробел — олли. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),
+        hint_touch: (en: "Stick to skate, button to ollie. Roll onto a purple pad to read about it.", ru: "Стик — кататься, кнопка — олли. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),
         close: (en: "Close (Esc)", ru: "Закрыть (Esc)"),
         stairs_title: (en: "LeetCode, in Rust", ru: "LeetCode на Rust"),
         stairs_body: (
@@ -428,5 +428,15 @@
         stairs_repo: "Bibazavr/leetcode-rust",
         egg_title: (en: "You found the sticker!", ru: "Стикер найден!"),
         egg_body: (en: "Bibacode is my Telegram channel.", ru: "Bibacode — мой Telegram-канал."),
+        ollie: (en: "Ollie", ru: "Олли"),
+        score: (en: "Score", ru: "Очки"),
+        sound_off: (en: "Turn sound off", ru: "Выключить звук"),
+        sound_on: (en: "Turn sound on", ru: "Включить звук"),
+        tricks: (
+            ollie: (en: "Ollie", ru: "Олли"),
+            air: (en: "Air", ru: "Эйр"),
+            grind: (en: "Grind", ru: "Грайнд"),
+            gap: (en: "Big gap", ru: "Большой гэп"),
+        ),
     ),
 )

@@ -13,13 +13,21 @@ webgl2 = ["bevy/webgl2"]
 webgpu = ["bevy/webgpu"]
 
 [dependencies]
-avian3d = { version = "0.8.0", default-features = false, features = ["3d", "parry-f32"] }
+avian3d = { version = "0.8.0", default-features = false, features = [
+    "3d",
+    "parry-f32",
+    "collider-from-mesh",
+    # Builds colliders for glTF scenes once they've spawned.
+    "bevy_scene",
+] }
 bevy = { version = "0.20.1", default-features = false, features = [
     "std",
     "web",
     "async_executor",
     "bevy_asset",
     "bevy_log",
+    # glTF scenes need their component types registered for reflection.
+    "reflect_auto_register",
     "bevy_winit",
     "bevy_window",
     "bevy_render",
@@ -29,6 +37,11 @@ bevy = { version = "0.20.1", default-features = false, features = [
     "bevy_camera",
     "bevy_mesh",
     "bevy_color",
+    "bevy_gltf",
+    "bevy_world_serialization",
+    "bevy_animation",
+    "gltf_animation",
+    "png",
 ] }
 content.workspace = true
 

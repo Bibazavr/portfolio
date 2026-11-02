@@ -3,15 +3,16 @@
 //!
 //! The plaza is 60 m square with the skater starting near the south edge,
 //! facing north (−Z). The career line runs west to east, oldest to newest,
-//! along the north edge.
+//! along the north edge. Ramps, rails, steps and the start box are Kenney
+//! models; the rest is primitives.
 
-use std::f32::consts::PI;
+use std::f32::consts::{FRAC_PI_2, PI};
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use content::Spot;
 
-use crate::{bridge, palette, skater::Skater};
+use crate::{Layer, assets, bridge, palette, skater::Skater};
 
 /// Where the skater starts, inside the start ledge's zone.
 pub const START: Vec3 = Vec3::new(0.0, 0.0, 20.5);
@@ -24,6 +25,37 @@ const MAX_CAREER_SPACING: f32 = 3.4;
 #[derive(Component)]
 struct Zone(Spot);
 
+/// The rails the skater can grind, as the line along each one's top.
+#[derive(Resource, Default)]
+pub struct Rails(pub Vec<Rail>);
+
+pub struct Rail {
+    a: Vec3,
+    b: Vec3,
+}
+
+impl Rail {
+    pub fn length(&self) -> f32 {
+        self.a.distance(self.b)
+    }
+
+    pub fn direction(&self) -> Vec3 {
+        (self.b - self.a).normalize()
+    }
+
+    /// The point `t` of the way from `a` to `b`.
+    pub fn at(&self, t: f32) -> Vec3 {
+        self.a.lerp(self.b, t)
+    }
+
+    /// How far along the rail the point nearest to `point` is; outside 0..1
+    /// when that point is past an end.
+    pub fn nearest(&self, point: Vec3) -> f32 {
+        let along = self.b - self.a;
+        (point - self.a).dot(along) / along.length_squared()
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.add_systems(Startup, spawn)
         .add_systems(Update, track_zones);
@@ -32,11 +64,16 @@ pub fn plugin(app: &mut App) {
 /// Spawns props with shared materials.
 struct Builder<'w, 's, 'a> {
     commands: Commands<'w, 's>,
+    assets: &'a AssetServer,
     meshes: &'a mut Assets<Mesh>,
     pad: Handle<StandardMaterial>,
 }
 
 impl Builder<'_, '_, '_> {
+    fn prop(&mut self, name: &str, transform: Transform, collider: Option<ColliderConstructor>) {
+        assets::prop(&mut self.commands, self.assets, name, transform, collider);
+    }
+
     /// A static box `size` wide, tall and deep, with its bottom centre at `at`.
     fn block(&mut self, size: Vec3, at: Vec3, material: &Handle<StandardMaterial>) {
         self.commands.spawn((
@@ -74,6 +111,8 @@ impl Builder<'_, '_, '_> {
             Sensor,
             Collider::cuboid(size.x, 2.0, size.y),
             CollisionEventsEnabled,
+            // Only the skater sets zones off, and the ground probe looks past them.
+            CollisionLayers::new(Layer::Zone, Layer::Default),
         ));
         if pad {
             let half_size = (size - 0.4) / 2.0;
@@ -88,6 +127,7 @@ impl Builder<'_, '_, '_> {
 
 fn spawn(
     commands: Commands,
+    assets: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -101,7 +141,6 @@ fn spawn(
         })
     };
     let accent = matte(palette::ACCENT);
-    let accent_light = matte(palette::ACCENT_LIGHT);
     let concrete_dark = matte(palette::CONCRETE_DARK);
     let ink = matte(palette::INK);
     let metal = matte(palette::METAL);
@@ -114,16 +153,17 @@ fn spawn(
     });
     let mut b = Builder {
         commands,
+        assets: &assets,
         meshes: &mut meshes,
         pad,
     };
+    let hull = Some(ColliderConstructor::ConvexHullFromMesh);
 
-    // Start ledge: who I am.
-    b.block(
-        Vec3::new(5.0, 0.45, 1.0),
-        Vec3::new(0.0, 0.0, 24.5),
-        &accent,
-    );
+    // Start ledge: who I am. Kenney's box has sloped ends; turned to run east-west.
+    let ledge = Transform::from_xyz(0.0, 0.0, 24.5)
+        .with_rotation(Quat::from_rotation_y(FRAC_PI_2))
+        .with_scale(Vec3::new(1.4, 2.2, 5.0));
+    b.prop("obstacle-box", ledge, hull.clone());
     b.zone(
         Spot::Start,
         Vec2::new(START.x, 21.5),
@@ -143,8 +183,10 @@ fn spawn(
     ));
     for i in 0..stops {
         let x = first + i as f32 * spacing;
-        let foot = Vec3::new(x - 0.9, 0.0, CAREER_Z);
-        b.kicker(foot, 0.0, Vec3::new(1.8, 0.4, 2.2), &accent_light);
+        let kicker = Transform::from_xyz(x, 0.0, CAREER_Z)
+            .with_rotation(Quat::from_rotation_y(-FRAC_PI_2))
+            .with_scale(Vec3::new(2.2, 1.3, 1.8));
+        b.prop("ramp", kicker, hull.clone());
         b.zone(
             Spot::Career(i),
             Vec2::new(x, CAREER_Z),
@@ -179,17 +221,25 @@ fn spawn(
         true,
     );
 
-    // Rail garden: a rail per open-source repo.
+    // Rail garden: a rail per open-source repo. Rails have no colliders: the
+    // board locks onto one from above (see `Rails::catch`) and rides through
+    // them on the ground rather than snagging.
+    let rail_scale = Vec3::new(2.0, 2.0, 8.0);
+    let rail_top = 0.25 * rail_scale.y;
+    let mut rails = Vec::new();
     for i in 0..portfolio.open_source.len() {
         let x = -25.0 + i as f32 * 2.5;
-        b.block(
-            Vec3::new(0.08, 0.08, 8.0),
-            Vec3::new(x, 0.42, -12.0),
-            &metal,
+        let at = Vec3::new(x, 0.0, -12.0);
+        b.prop(
+            "rail-low",
+            Transform::from_translation(at).with_scale(rail_scale),
+            None,
         );
-        for z in [-15.6, -8.4] {
-            b.block(Vec3::new(0.08, 0.42, 0.08), Vec3::new(x, 0.0, z), &metal);
-        }
+        let half = Vec3::Z * rail_scale.z / 2.0;
+        rails.push(Rail {
+            a: at - half + Vec3::Y * rail_top,
+            b: at + half + Vec3::Y * rail_top,
+        });
         b.zone(
             Spot::Rail(i),
             Vec2::new(x, -12.0),
@@ -197,6 +247,7 @@ fn spawn(
             true,
         );
     }
+    b.commands.insert_resource(Rails(rails));
 
     // Skill shop, with a deck leaning on it.
     b.block(Vec3::new(5.0, 3.0, 3.5), Vec3::new(-24.5, 0.0, 3.0), &paper);
@@ -262,13 +313,9 @@ fn spawn(
         true,
     );
 
-    // Stair set: three steps up to a platform.
-    let mut z = -10.0;
-    for (height, depth) in [(0.3, 0.8), (0.6, 0.8), (0.9, 3.0)] {
-        let at = Vec3::new(20.0, 0.0, z - depth / 2.0);
-        b.block(Vec3::new(5.0, height, depth), at, &concrete_dark);
-        z -= depth;
-    }
+    // Stair set: Kenney's three steps, rising toward −Z.
+    let steps = Transform::from_xyz(20.0, 0.0, -12.25).with_scale(Vec3::new(5.0, 3.0, 4.5));
+    b.prop("steps", steps, Some(ColliderConstructor::TrimeshFromMesh));
     b.zone(
         Spot::Stairs,
         Vec2::new(20.0, -8.0),

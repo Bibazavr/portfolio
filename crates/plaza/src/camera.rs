@@ -1,10 +1,14 @@
 //! A third-person camera that trails the skater.
 
 use bevy::{
-    prelude::*, render::view::Tonemapping, transform::TransformSystems, window::PrimaryWindow,
+    pbr::{DistanceFog, FogFalloff},
+    prelude::*,
+    render::view::Tonemapping,
+    transform::TransformSystems,
+    window::PrimaryWindow,
 };
 
-use crate::skater::Skater;
+use crate::{palette, skater::Skater};
 
 /// Where the camera sits relative to the skater: above and behind.
 const OFFSET: Vec3 = Vec3::new(0.0, 3.2, 6.5);
@@ -41,6 +45,15 @@ fn spawn(mut commands: Commands) {
         Camera3d::default(),
         // The default tonemapper needs lookup tables we don't ship.
         Tonemapping::AcesFitted,
+        // The far side of the plaza fades into the sky.
+        DistanceFog {
+            color: palette::SKY,
+            falloff: FogFalloff::Linear {
+                start: 35.0,
+                end: 110.0,
+            },
+            ..default()
+        },
         Transform::from_xyz(0.0, 8.0, 26.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 }

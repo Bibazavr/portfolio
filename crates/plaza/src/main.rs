@@ -1,8 +1,11 @@
 //! The interactive skate plaza. In production it runs as WASM inside the shell
 //! page that `crates/classic` writes; natively it opens a window for development.
 
+mod assets;
 mod bridge;
 mod camera;
+mod character;
+mod feedback;
 mod input;
 mod palette;
 mod plaza;
@@ -14,6 +17,15 @@ use bevy::{asset::AssetMetaCheck, prelude::*};
 
 /// Rendering at a phone's full 3× pixel ratio costs far more than it shows.
 const MAX_PIXEL_RATIO: f32 = 2.0;
+
+/// Trigger zones sit on their own layer: only the skater sets them off, and
+/// the skater's ground probe looks past them.
+#[derive(PhysicsLayer, Default)]
+enum Layer {
+    #[default]
+    Default,
+    Zone,
+}
 
 fn main() {
     App::new()
@@ -35,10 +47,13 @@ fn main() {
                     ..default()
                 }),
             PhysicsPlugins::default(),
+            assets::plugin,
             input::plugin,
             plaza::plugin,
             skater::plugin,
+            character::plugin,
             spots::plugin,
+            feedback::plugin,
             camera::plugin,
         ))
         .add_systems(Update, cap_pixel_ratio)

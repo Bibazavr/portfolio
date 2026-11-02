@@ -13,6 +13,9 @@
 		window.plazaBridge = {
 			show: (spot) => console.log('panel:', spot),
 			hide: () => console.log('panel: none'),
+			sound: () => {},
+			motion: () => {},
+			trick: (kind, points, total) => console.log(`${kind} +${points} = ${total}`),
 		};
 	</script>
 	<link data-trunk rel="rust" data-bin="plaza" data-type="main">

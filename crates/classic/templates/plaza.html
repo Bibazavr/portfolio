@@ -87,6 +87,64 @@
 			border-color: var(--accent);
 		}
 
+		.sound {
+			display: grid;
+			place-items: center;
+			width: 40px;
+			padding: 0;
+		}
+
+		.sound svg {
+			width: 20px;
+			height: 20px;
+		}
+
+		.sound .sound-off,
+		.sound.muted .sound-on {
+			display: none;
+		}
+
+		.sound.muted .sound-off {
+			display: block;
+		}
+
+		.score {
+			position: fixed;
+			z-index: 2;
+			top: var(--top);
+			left: max(12px, env(safe-area-inset-left));
+			margin: 0;
+			padding: 8px 14px;
+			border-radius: 12px;
+			background: rgb(20 23 26 / 0.8);
+			color: var(--bg);
+			font: 600 14px/1.3 var(--font);
+		}
+
+		.score strong {
+			margin-left: 4px;
+			font-size: 17px;
+			font-variant-numeric: tabular-nums;
+		}
+
+		.trick {
+			margin-left: 10px;
+			color: #b796f0;
+			font-weight: 800;
+			transition: opacity 0.5s;
+		}
+
+		.trick.done {
+			opacity: 0;
+		}
+
+		/* On phones the score gets its own row under the buttons. */
+		@media (max-width: 640px) {
+			.score {
+				top: calc(var(--top) + 50px);
+			}
+		}
+
 		/* Shown only once the head script has run, so it can't hang there without JS. */
 		#loading {
 			display: none;
@@ -131,7 +189,8 @@
 		}
 
 		.hint-touch,
-		.stick {
+		.stick,
+		.ollie {
 			display: none;
 		}
 
@@ -144,16 +203,14 @@
 				display: inline;
 			}
 
-			.stick {
+			.stick,
+			.ollie {
 				display: block;
 			}
 
-			/* Beside the stick rather than over the skater. */
+			/* Above the stick and the ollie button, below the skater. */
 			.hint {
-				left: calc(max(24px, env(safe-area-inset-left)) + 148px);
-				bottom: max(24px, env(safe-area-inset-bottom));
-				margin: 0;
-				text-align: left;
+				bottom: calc(max(24px, env(safe-area-inset-bottom)) + 148px);
 			}
 		}
 
@@ -170,6 +227,28 @@
 			touch-action: none;
 			-webkit-user-select: none;
 			user-select: none;
+		}
+
+		.ollie {
+			position: fixed;
+			z-index: 1;
+			right: max(24px, env(safe-area-inset-right));
+			bottom: calc(max(24px, env(safe-area-inset-bottom)) + 18px);
+			width: 96px;
+			height: 96px;
+			border: 2px solid rgb(250 250 247 / 0.8);
+			border-radius: 50%;
+			background: var(--accent);
+			box-shadow: 0 4px 12px rgb(20 23 26 / 0.3);
+			color: #fff;
+			font: 700 16px/1 var(--font);
+			touch-action: none;
+			-webkit-user-select: none;
+			user-select: none;
+		}
+
+		.ollie:active {
+			transform: scale(0.94);
 		}
 
 		.knob {
@@ -204,10 +283,11 @@
 
 		@media (max-width: 640px) {
 			.panel {
+				top: calc(var(--top) + 100px);
 				left: 12px;
 				right: 12px;
 				width: auto;
-				max-height: 46dvh;
+				max-height: 42dvh;
 				padding: 18px 20px;
 			}
 		}
@@ -463,8 +543,128 @@
 			const classicLink = document.getElementById('classic');
 			const panels = document.getElementById('panels');
 			const hint = document.getElementById('hint');
+			const soundButton = document.getElementById('sound');
 			const params = new URLSearchParams(location.search);
 			let plaza = null;
+
+			// Sound, synthesised with Web Audio, so there are no files to load.
+			// Browsers (iOS above all) only allow audio after a tap or key press.
+			const audio = (() => {
+				const VOLUME = 0.5;
+				let context = null;
+				let master, noise, rolling, grinding;
+				let muted = false;
+				try {
+					muted = localStorage.getItem('plaza-muted') === '1';
+				} catch (error) {}
+
+				function filter(type, frequency, q) {
+					const node = context.createBiquadFilter();
+					node.type = type;
+					node.frequency.value = frequency;
+					node.Q.value = q;
+					return node;
+				}
+				// A looping noise bed whose volume follows the board.
+				function bed(shape) {
+					const source = context.createBufferSource();
+					source.buffer = noise;
+					source.loop = true;
+					const gain = context.createGain();
+					gain.gain.value = 0;
+					source.connect(shape).connect(gain).connect(master);
+					source.start();
+					return gain;
+				}
+				function hit(type, frequency, seconds, volume) {
+					const source = context.createBufferSource();
+					source.buffer = noise;
+					const gain = context.createGain();
+					const now = context.currentTime;
+					gain.gain.setValueAtTime(volume, now);
+					gain.gain.exponentialRampToValueAtTime(0.001, now + seconds);
+					source.connect(filter(type, frequency, 1)).connect(gain).connect(master);
+					source.start(now, Math.random());
+					source.stop(now + seconds);
+				}
+				function tone(from, to, seconds, volume, wave = 'sine', delay = 0) {
+					const oscillator = context.createOscillator();
+					oscillator.type = wave;
+					const gain = context.createGain();
+					const now = context.currentTime + delay;
+					oscillator.frequency.setValueAtTime(from, now);
+					oscillator.frequency.exponentialRampToValueAtTime(to, now + seconds);
+					gain.gain.setValueAtTime(volume, now);
+					gain.gain.exponentialRampToValueAtTime(0.001, now + seconds);
+					oscillator.connect(gain).connect(master);
+					oscillator.start(now);
+					oscillator.stop(now + seconds);
+				}
+				const sounds = {
+					ollie: () => {
+						hit('highpass', 2000, 0.05, 0.8);
+						tone(220, 70, 0.12, 0.5);
+					},
+					land: () => {
+						hit('lowpass', 900, 0.12, 0.9);
+						tone(110, 45, 0.18, 0.6);
+					},
+					trick: () => {
+						tone(880, 880, 0.12, 0.12, 'triangle');
+						tone(1320, 1320, 0.2, 0.12, 'triangle', 0.08);
+					},
+				};
+
+				return {
+					get muted() {
+						return muted;
+					},
+					start() {
+						if (context) {
+							if (context.state === 'suspended') context.resume();
+							return;
+						}
+						const Context = window.AudioContext || window.webkitAudioContext;
+						if (!Context) return;
+						context = new Context();
+						master = context.createGain();
+						master.gain.value = muted ? 0 : VOLUME;
+						master.connect(context.destination);
+						noise = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
+						const samples = noise.getChannelData(0);
+						for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+						rolling = bed(filter('lowpass', 500, 0.7));
+						grinding = bed(filter('bandpass', 2600, 6));
+					},
+					play(name) {
+						if (context && !muted) sounds[name]?.();
+					},
+					motion(speed, isRolling, isGrinding) {
+						if (!context) return;
+						const now = context.currentTime;
+						rolling.gain.setTargetAtTime(isRolling ? speed * 0.35 : 0, now, 0.05);
+						grinding.gain.setTargetAtTime(isGrinding ? 0.25 : 0, now, 0.03);
+					},
+					setMuted(value) {
+						muted = value;
+						try {
+							localStorage.setItem('plaza-muted', value ? '1' : '0');
+						} catch (error) {}
+						if (master) master.gain.setTargetAtTime(muted ? 0 : VOLUME, context.currentTime, 0.02);
+					},
+				};
+			})();
+			for (const type of ['pointerdown', 'touchend', 'keydown']) addEventListener(type, () => audio.start());
+
+			function renderSound() {
+				const state = audio.muted ? 'On' : 'Off';
+				soundButton.classList.toggle('muted', audio.muted);
+				soundButton.setAttribute('aria-label', soundButton.dataset[`${root.lang}${state}`]);
+			}
+			soundButton.addEventListener('click', () => {
+				audio.setMuted(!audio.muted);
+				renderSound();
+			});
 
 			// Language: the page holds both, CSS shows the current one.
 			function setLang(lang) {
@@ -472,6 +672,7 @@
 				document.title = document.querySelector('title').dataset[lang];
 				classicLink.href = classicLink.dataset[`${lang}Href`];
 				canvas.setAttribute('aria-label', canvas.dataset[`${lang}Label`]);
+				renderSound();
 			}
 			setLang(root.lang);
 			document.getElementById('lang-toggle').addEventListener('click', () => {
@@ -490,9 +691,26 @@
 				if (!spot && panels.contains(document.activeElement)) canvas.focus();
 				openSpot = spot;
 			}
+			// Score: the total, and the last trick for a moment.
+			const trickNames = {{ self.tricks_json()|safe }};
+			const total = document.getElementById('score-total');
+			const trick = document.getElementById('trick');
+			let trickTimer;
+			function showTrick(kind, points, sum) {
+				total.textContent = sum;
+				trick.textContent = `${trickNames[root.lang][kind] ?? kind} +${points}`;
+				trick.classList.remove('done');
+				clearTimeout(trickTimer);
+				trickTimer = setTimeout(() => trick.classList.add('done'), 1800);
+				audio.play('trick');
+			}
+
 			window.plazaBridge = {
 				show: (spot) => showPanel(spot),
 				hide: () => showPanel(null),
+				sound: (name) => audio.play(name),
+				motion: (speed, rolling, grinding) => audio.motion(speed, rolling, grinding),
+				trick: showTrick,
 			};
 			function dismiss() {
 				showPanel(null);
@@ -548,6 +766,12 @@
 			stick.addEventListener('pointerup', releaseStick);
 			stick.addEventListener('pointercancel', releaseStick);
 
+			document.getElementById('ollie').addEventListener('pointerdown', (event) => {
+				event.preventDefault();
+				hideHint();
+				plaza?.ollie();
+			});
+
 			// Bevy fixes the renderer at compile time, so there is one build per renderer.
 			const builds = {{ self.builds_json()|safe }};
 			async function pickRenderer() {
@@ -594,7 +818,18 @@
 		<button id="lang-toggle" class="chip" type="button">
 			<span data-lang="en" lang="ru">{{ self.ru(p.ui.language_name) }}</span><span data-lang="ru" lang="en">{{ self.en(p.ui.language_name) }}</span>
 		</button>
+		<button id="sound" class="chip sound" type="button" aria-label="{{ self.en(p.plaza.sound_off) }}"
+			data-en-off="{{ self.en(p.plaza.sound_off) }}" data-en-on="{{ self.en(p.plaza.sound_on) }}"
+			data-ru-off="{{ self.ru(p.plaza.sound_off) }}" data-ru-on="{{ self.ru(p.plaza.sound_on) }}">
+			<svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+			<svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 6 6"/><path d="m22 9-6 6"/></svg>
+		</button>
 	</div>
+
+	<p class="score" aria-hidden="true">
+		<span data-lang="en">{{ self.en(p.plaza.score) }}</span><span data-lang="ru">{{ self.ru(p.plaza.score) }}</span>
+		<strong id="score-total">0</strong><span id="trick" class="trick done"></span>
+	</p>
 
 	<canvas id="plaza" tabindex="0" aria-label="{{ self.en(p.plaza.label) }}" data-en-label="{{ self.en(p.plaza.label) }}" data-ru-label="{{ self.ru(p.plaza.label) }}"></canvas>
 
@@ -609,6 +844,9 @@
 	</p>
 
 	<div id="stick" class="stick" aria-hidden="true"><div class="knob"></div></div>
+	<button id="ollie" class="ollie" type="button" tabindex="-1" aria-hidden="true">
+		<span data-lang="en">{{ self.en(p.plaza.ollie) }}</span><span data-lang="ru" lang="ru">{{ self.ru(p.plaza.ollie) }}</span>
+	</button>
 
 	<div id="panels" aria-live="polite">
 		{{- panels|safe }}

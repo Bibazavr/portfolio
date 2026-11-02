@@ -341,6 +341,29 @@ impl<'a> PlazaShell<'a> {
     fn builds_json(&self) -> String {
         serde_json::to_string(&self.builds).expect("strings serialize")
     }
+
+    /// `{ "en": { "ollie": "Ollie", … }, "ru": { … } }` for the score counter.
+    fn tricks_json(&self) -> String {
+        let names: serde_json::Map<String, serde_json::Value> = Lang::ALL
+            .iter()
+            .map(|&lang| {
+                let tricks = self
+                    .p
+                    .plaza
+                    .tricks
+                    .all()
+                    .map(|(id, name)| (id.to_owned(), json!(name.get(lang))));
+                (
+                    lang.code().to_owned(),
+                    serde_json::Value::Object(tricks.into_iter().collect()),
+                )
+            })
+            .collect();
+        // Keep a "</" inside a string from closing the <script> element.
+        serde_json::Value::Object(names)
+            .to_string()
+            .replace("</", "<\\/")
+    }
 }
 
 /// Stands in for the plaza at `/` when it hasn't been built.
