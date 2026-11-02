@@ -32,9 +32,9 @@ struct Shot {
     frames: u32,
 }
 
-/// Behind and above the start, looking across the plaza toward the halfpipe.
+/// Behind and above the start, looking past the skater at the name.
 fn preview_camera() -> Transform {
-    Transform::from_xyz(-3.5, 4.0, 27.0).looking_at(Vec3::new(6.0, 0.8, 14.0), Vec3::Y)
+    Transform::from_xyz(-2.0, 3.6, 26.5).looking_at(Vec3::new(2.5, 0.8, 13.0), Vec3::Y)
 }
 
 /// The pose after `--camera`, as `x,y,z,tx,ty,tz`.
