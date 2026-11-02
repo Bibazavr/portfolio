@@ -4,7 +4,7 @@
 //
 // No dependencies; needs Node 20 or newer. portfolio.ron is only read. If a
 // fetch fails, that part keeps its previous value, and the script always
-// exits 0 so a flaky API never fails the nightly run. The file has no
+// exits 0 so a flaky API never fails the scheduled run. The file has no
 // timestamps, so it only changes when the numbers do.
 //
 //   node scripts/update-stats.mjs

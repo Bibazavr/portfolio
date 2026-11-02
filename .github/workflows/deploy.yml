@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  # The nightly stats workflow calls this after committing new stats.
+  # The monthly stats workflow calls this after committing new stats.
   workflow_call:
     inputs:
       ref:

@@ -1,4 +1,4 @@
-//! Live numbers from `content/stats.json`, which a nightly job refreshes (see
+//! Live numbers from `content/stats.json`, which a monthly job refreshes (see
 //! `scripts/update-stats.mjs`). Everything is optional: the views show what's
 //! there and leave out the rest.
 

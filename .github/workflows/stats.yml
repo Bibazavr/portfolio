@@ -1,12 +1,13 @@
 name: Stats
 
-# Refreshes content/stats.json every night and redeploys when it changed.
+# Refreshes content/stats.json once a month and redeploys when it changed.
 # Pushes made with GITHUB_TOKEN don't trigger other workflows, so this one
 # calls the deploy workflow itself.
 
 on:
   schedule:
-    - cron: "17 3 * * *"
+    # 03:17 UTC on the 1st of every month.
+    - cron: "17 3 1 * *"
   workflow_dispatch:
 
 concurrency:

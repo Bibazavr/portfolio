@@ -38,7 +38,7 @@ The touch stick is HTML too and passes its position to Bevy through the WASM exp
 
 `content/stats.json` holds GitHub stars, forks and language for the `open_source` repos and
 LeetCode solved counts (plus contest rating, once there is one). `scripts/update-stats.mjs`
-(Node, no dependencies) refreshes it; `.github/workflows/stats.yml` runs it nightly and on demand,
+(Node, no dependencies) refreshes it; `.github/workflows/stats.yml` runs it once a month and on demand,
 commits only when the numbers changed, and then calls the deploy workflow, since pushes made with
 `GITHUB_TOKEN` don't trigger other workflows. A failed fetch keeps the previous numbers. The script
 only reads `portfolio.ron`. Both views show whatever stats are there and leave out the rest.
