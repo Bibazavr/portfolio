@@ -8,6 +8,13 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Plaza (dev)</title>
+	<script>
+		// The shell page shows panels here; the dev page only logs them.
+		window.plazaBridge = {
+			show: (spot) => console.log('panel:', spot),
+			hide: () => console.log('panel: none'),
+		};
+	</script>
 	<link data-trunk rel="rust" data-bin="plaza" data-type="main">
 	<style>
 		html, body { margin: 0; height: 100%; overflow: hidden; background: #dde3e8; }

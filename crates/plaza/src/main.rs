@@ -1,11 +1,13 @@
 //! The interactive skate plaza. In production it runs as WASM inside the shell
 //! page that `crates/classic` writes; natively it opens a window for development.
 
+mod bridge;
 mod camera;
 mod input;
 mod palette;
 mod plaza;
 mod skater;
+mod spots;
 
 use avian3d::prelude::*;
 use bevy::{asset::AssetMetaCheck, prelude::*};
@@ -36,6 +38,7 @@ fn main() {
             input::plugin,
             plaza::plugin,
             skater::plugin,
+            spots::plugin,
             camera::plugin,
         ))
         .add_systems(Update, cap_pixel_ratio)

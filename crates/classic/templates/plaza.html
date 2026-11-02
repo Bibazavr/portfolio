@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-	<title data-ru="{{ self.ru(p.identity.name) }} — {{ self.ru(p.identity.title) }}">{{ self.en(p.identity.name) }} — {{ self.en(p.identity.title) }}</title>
+	<title data-en="{{ self.en(p.identity.name) }} — {{ self.en(p.identity.title) }}" data-ru="{{ self.ru(p.identity.name) }} — {{ self.ru(p.identity.title) }}">{{ self.en(p.identity.name) }} — {{ self.en(p.identity.title) }}</title>
 	<meta name="description" content="{{ self.en(p.identity.summary) }}">
 	<meta name="theme-color" content="#dde3e8">
 	<link rel="canonical" href="{{ p.site.url }}/">
@@ -19,13 +19,36 @@
 
 	<style>
 		/* The background matches the plaza's sky, so loading doesn't flash. */
+		:root {
+			--bg: #fafaf7;
+			--text: #14171a;
+			--muted: #5a6067;
+			--border: #e2e4de;
+			--accent: #7851a9;
+			--link: #5e3a91;
+			--font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			--top: max(12px, env(safe-area-inset-top));
+		}
+
 		html, body {
 			margin: 0;
 			height: 100%;
 			overflow: hidden;
 			background: #dde3e8;
-			color: #14171a;
-			font: 16px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			color: var(--text);
+			font: 16px/1.5 var(--font);
+			-webkit-font-smoothing: antialiased;
+		}
+
+		/* Everything a visitor reads exists in both languages; show the current one. */
+		html[lang="en"] [data-lang="ru"],
+		html[lang="ru"] [data-lang="en"] {
+			display: none !important;
+		}
+
+		:focus-visible {
+			outline: 2px solid var(--accent);
+			outline-offset: 3px;
 		}
 
 		#plaza {
@@ -38,33 +61,33 @@
 			touch-action: none;
 		}
 
-		.classic {
+		.top-bar {
 			position: fixed;
-			z-index: 1;
-			top: max(12px, env(safe-area-inset-top));
+			z-index: 2;
+			top: var(--top);
 			right: max(12px, env(safe-area-inset-right));
-			padding: 10px 16px;
-			border: 1px solid #e2e4de;
+			display: flex;
+			gap: 8px;
+		}
+
+		.chip {
+			padding: 9px 14px;
+			border: 1px solid var(--border);
 			border-radius: 12px;
-			background: rgb(250 250 247 / 0.88);
+			background: rgb(250 250 247 / 0.9);
 			-webkit-backdrop-filter: blur(8px);
 			backdrop-filter: blur(8px);
-			color: #14171a;
-			font-weight: 600;
-			font-size: 15px;
+			color: var(--text);
+			font: 600 15px/1.2 var(--font);
 			text-decoration: none;
+			cursor: pointer;
 		}
 
-		.classic:hover {
-			border-color: #7851a9;
+		.chip:hover {
+			border-color: var(--accent);
 		}
 
-		.classic:focus-visible {
-			outline: 2px solid #7851a9;
-			outline-offset: 3px;
-		}
-
-		/* Shown only once the script below has run, so it can't hang there without JS. */
+		/* Shown only once the head script has run, so it can't hang there without JS. */
 		#loading {
 			display: none;
 		}
@@ -81,8 +104,307 @@
 			margin: 0;
 			padding: 0 24px;
 			text-align: center;
-			color: #5a6067;
+			color: var(--muted);
 			pointer-events: none;
+		}
+
+		.hint {
+			position: fixed;
+			z-index: 1;
+			left: 16px;
+			right: 16px;
+			bottom: max(20px, env(safe-area-inset-bottom));
+			width: fit-content;
+			margin: 0 auto;
+			padding: 8px 16px;
+			border-radius: 16px;
+			background: rgb(20 23 26 / 0.78);
+			color: var(--bg);
+			font-size: 14px;
+			text-align: center;
+			transition: opacity 0.6s;
+			pointer-events: none;
+		}
+
+		.hint.done {
+			opacity: 0;
+		}
+
+		.hint-touch,
+		.stick {
+			display: none;
+		}
+
+		@media (pointer: coarse) {
+			.hint-keys {
+				display: none;
+			}
+
+			.hint-touch {
+				display: inline;
+			}
+
+			.stick {
+				display: block;
+			}
+
+			/* Beside the stick rather than over the skater. */
+			.hint {
+				left: calc(max(24px, env(safe-area-inset-left)) + 148px);
+				bottom: max(24px, env(safe-area-inset-bottom));
+				margin: 0;
+				text-align: left;
+			}
+		}
+
+		.stick {
+			position: fixed;
+			z-index: 1;
+			left: max(24px, env(safe-area-inset-left));
+			bottom: max(24px, env(safe-area-inset-bottom));
+			width: 132px;
+			height: 132px;
+			border: 2px solid rgb(250 250 247 / 0.8);
+			border-radius: 50%;
+			background: rgb(20 23 26 / 0.16);
+			touch-action: none;
+			-webkit-user-select: none;
+			user-select: none;
+		}
+
+		.knob {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			width: 56px;
+			height: 56px;
+			margin: -28px 0 0 -28px;
+			border-radius: 50%;
+			background: var(--accent);
+			box-shadow: 0 4px 12px rgb(20 23 26 / 0.3);
+		}
+
+		/* Panels: a side card on wide screens, a sheet under the top bar on phones. */
+		.panel {
+			position: fixed;
+			z-index: 2;
+			top: calc(var(--top) + 56px);
+			right: max(16px, env(safe-area-inset-right));
+			width: min(400px, calc(100vw - 32px));
+			max-height: calc(100dvh - var(--top) - 80px);
+			overflow: auto;
+			overscroll-behavior: contain;
+			box-sizing: border-box;
+			padding: 22px 24px;
+			border: 1px solid var(--border);
+			border-radius: 18px;
+			background: var(--bg);
+			box-shadow: 0 16px 48px rgb(20 23 26 / 0.2);
+		}
+
+		@media (max-width: 640px) {
+			.panel {
+				left: 12px;
+				right: 12px;
+				width: auto;
+				max-height: 46dvh;
+				padding: 18px 20px;
+			}
+		}
+
+		.panel-close {
+			float: right;
+			width: 36px;
+			height: 36px;
+			margin: -8px -10px 4px 8px;
+			border: 0;
+			border-radius: 50%;
+			background: #f1f2ed;
+			color: var(--text);
+			font: 22px/1 var(--font);
+			cursor: pointer;
+		}
+
+		.panel h2 {
+			margin: 0 0 6px;
+			font-size: 23px;
+			line-height: 1.2;
+			letter-spacing: -0.015em;
+		}
+
+		.panel h3 {
+			margin: 0 0 4px;
+			font-size: 16px;
+		}
+
+		.panel p {
+			margin: 0 0 12px;
+		}
+
+		.panel a {
+			color: var(--link);
+			text-underline-offset: 0.18em;
+		}
+
+		.eyebrow {
+			color: var(--muted);
+			font-size: 12px;
+			font-weight: 600;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+		}
+
+		.lede {
+			color: var(--muted);
+			font-size: 17px;
+		}
+
+		.meta {
+			color: var(--muted);
+			font-size: 14px;
+		}
+
+		.badge {
+			display: inline-block;
+			margin-left: 4px;
+			padding: 1px 8px;
+			border-radius: 999px;
+			background: #f1f2ed;
+			font-size: 12px;
+			font-weight: 600;
+			white-space: nowrap;
+		}
+
+		.points,
+		.highlights {
+			margin: 0 0 12px;
+			padding-left: 20px;
+		}
+
+		.points li,
+		.highlights li {
+			margin-bottom: 6px;
+		}
+
+		.points li::marker,
+		.highlights li::marker {
+			color: var(--accent);
+			font-weight: 700;
+		}
+
+		.links {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px 16px;
+			margin: 0 0 12px;
+			padding: 0;
+			list-style: none;
+			font-size: 15px;
+		}
+
+		.facts {
+			display: grid;
+			grid-template-columns: max-content 1fr;
+			gap: 2px 14px;
+			margin: 0;
+			font-size: 15px;
+		}
+
+		.facts dt {
+			color: var(--muted);
+		}
+
+		.facts dd {
+			margin: 0;
+			font-weight: 600;
+		}
+
+		.repo-name {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			font-size: 18px !important;
+			overflow-wrap: anywhere;
+		}
+
+		/* The skill shop's deck: grip tape with stickers on it. */
+		.deck {
+			padding: 18px 16px;
+			border-radius: 40px;
+			background: #14171a;
+			color: var(--bg);
+		}
+
+		.sticker-group + .sticker-group {
+			margin-top: 14px;
+		}
+
+		.deck h3 {
+			color: #b796f0;
+			font-size: 12px;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+		}
+
+		.stickers {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+			margin: 0 0 12px;
+			padding: 0;
+			list-style: none;
+		}
+
+		.deck .stickers {
+			margin: 0;
+		}
+
+		.stickers li {
+			padding: 3px 10px;
+			border-radius: 10px;
+			background: #f1f2ed;
+			color: var(--text);
+			font-size: 13px;
+			line-height: 1.4;
+			transform: rotate(-1.5deg);
+		}
+
+		.stickers li:nth-child(3n + 1) {
+			background: #b796f0;
+			transform: rotate(1.5deg);
+		}
+
+		.stickers li:nth-child(3n + 2) {
+			background: #fafaf7;
+		}
+
+		.app {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			margin-bottom: 12px;
+		}
+
+		.app img {
+			border-radius: 16px;
+		}
+
+		.app p {
+			margin: 0;
+		}
+
+		.email {
+			font-size: 19px;
+			font-weight: 600;
+			overflow-wrap: anywhere;
+		}
+
+		.button {
+			display: inline-block;
+			padding: 9px 16px;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			color: var(--text) !important;
+			font-weight: 600;
+			text-decoration: none;
 		}
 	</style>
 
@@ -105,7 +427,6 @@
 			}
 			document.documentElement.lang = lang;
 			document.documentElement.classList.add('js');
-			window.plazaLang = lang;
 			if (params.has('play')) return;
 
 			function hasFastWebGL2() {
@@ -137,16 +458,98 @@
 
 	<script type="module">
 		if (!window.plazaRedirecting) {
-			if (window.plazaLang === 'ru') {
-				for (const el of document.querySelectorAll('[data-ru]')) el.textContent = el.dataset.ru;
-				for (const el of document.querySelectorAll('[data-ru-href]')) el.href = el.dataset.ruHref;
-				for (const el of document.querySelectorAll('[data-ru-label]')) el.setAttribute('aria-label', el.dataset.ruLabel);
-			}
-
-			const builds = {{ self.builds_json()|safe }};
+			const root = document.documentElement;
+			const canvas = document.getElementById('plaza');
+			const classicLink = document.getElementById('classic');
+			const panels = document.getElementById('panels');
+			const hint = document.getElementById('hint');
 			const params = new URLSearchParams(location.search);
+			let plaza = null;
+
+			// Language: the page holds both, CSS shows the current one.
+			function setLang(lang) {
+				root.lang = lang;
+				document.title = document.querySelector('title').dataset[lang];
+				classicLink.href = classicLink.dataset[`${lang}Href`];
+				canvas.setAttribute('aria-label', canvas.dataset[`${lang}Label`]);
+			}
+			setLang(root.lang);
+			document.getElementById('lang-toggle').addEventListener('click', () => {
+				const lang = root.lang === 'ru' ? 'en' : 'ru';
+				setLang(lang);
+				params.set('lang', lang);
+				history.replaceState(null, '', `?${params}`);
+			});
+
+			// Panels. Bevy calls show/hide as the skater enters and leaves spots.
+			// Esc or ✕ closes a panel until the skater leaves that spot and comes back.
+			// Opening a panel never moves focus, so the keyboard keeps steering.
+			let openSpot = null;
+			function showPanel(spot) {
+				for (const panel of panels.children) panel.hidden = panel.dataset.spot !== spot;
+				if (!spot && panels.contains(document.activeElement)) canvas.focus();
+				openSpot = spot;
+			}
+			window.plazaBridge = {
+				show: (spot) => showPanel(spot),
+				hide: () => showPanel(null),
+			};
+			function dismiss() {
+				showPanel(null);
+				canvas.focus();
+			}
+			addEventListener('keydown', (event) => {
+				if (event.key === 'Escape' && openSpot) dismiss();
+			});
+			panels.addEventListener('click', (event) => {
+				if (event.target.closest('.panel-close')) dismiss();
+			});
+
+			// The hint goes away once the visitor starts skating.
+			const hideHint = () => hint.classList.add('done');
+			canvas.addEventListener('keydown', hideHint, { once: true });
+
+			// Touch stick: up pushes, down brakes, sideways steers.
+			const stick = document.getElementById('stick');
+			const knob = stick.firstElementChild;
+			let pointer = null;
+			function moveStick(event) {
+				const box = stick.getBoundingClientRect();
+				const radius = box.width / 2;
+				let x = (event.clientX - box.left - radius) / radius;
+				let y = (event.clientY - box.top - radius) / radius;
+				const length = Math.hypot(x, y);
+				if (length > 1) {
+					x /= length;
+					y /= length;
+				}
+				knob.style.transform = `translate(${x * radius * 0.6}px, ${y * radius * 0.6}px)`;
+				plaza?.set_stick(x, -y);
+			}
+			function releaseStick(event) {
+				if (event.pointerId !== pointer) return;
+				pointer = null;
+				knob.style.transform = '';
+				plaza?.set_stick(0, 0);
+			}
+			stick.addEventListener('pointerdown', (event) => {
+				pointer = event.pointerId;
+				try {
+					stick.setPointerCapture(pointer);
+				} catch (error) {
+					// The pointer was already released; the move and up events still arrive.
+				}
+				hideHint();
+				moveStick(event);
+			});
+			stick.addEventListener('pointermove', (event) => {
+				if (event.pointerId === pointer) moveStick(event);
+			});
+			stick.addEventListener('pointerup', releaseStick);
+			stick.addEventListener('pointercancel', releaseStick);
 
 			// Bevy fixes the renderer at compile time, so there is one build per renderer.
+			const builds = {{ self.builds_json()|safe }};
 			async function pickRenderer() {
 				const forced = params.get('renderer');
 				if (builds.includes(forced)) return forced;
@@ -170,21 +573,45 @@
 			}
 
 			const base = `/plaza/${renderer}/`;
+			const module = await import(`${base}plaza.js?v={{ version }}`);
 			try {
-				const { default: init } = await import(`${base}plaza.js?v={{ version }}`);
-				await init({ module_or_path: `${base}plaza_bg.wasm?v={{ version }}` });
+				await module.default({ module_or_path: `${base}plaza_bg.wasm?v={{ version }}` });
 			} catch (error) {
 				// winit leaves Rust's event loop by throwing; that one isn't a failure.
 				if (!String(error).includes('Using exceptions for control flow')) throw error;
 			}
+			plaza = module;
 			document.getElementById('loading').hidden = true;
+			canvas.focus({ preventScroll: true });
 		}
 	</script>
 </head>
 <body>
-	<a class="classic" href="{{ self.classic_path_en() }}" data-ru="{{ self.ru(p.ui.classic_view) }}" data-ru-href="{{ self.classic_path_ru() }}">{{ self.en(p.ui.classic_view) }}</a>
-	<canvas id="plaza" aria-label="{{ self.en(p.ui.plaza_label) }}" data-ru-label="{{ self.ru(p.ui.plaza_label) }}"></canvas>
-	<p id="loading" class="loading" data-ru="{{ self.ru(p.ui.loading) }}">{{ self.en(p.ui.loading) }}</p>
-	<noscript><p class="loading">{{ self.en(p.ui.needs_js) }} / {{ self.ru(p.ui.needs_js) }}</p></noscript>
+	<div class="top-bar">
+		<a id="classic" class="chip" href="{{ self.classic_path_en() }}" data-en-href="{{ self.classic_path_en() }}" data-ru-href="{{ self.classic_path_ru() }}">
+			<span data-lang="en">{{ self.en(p.plaza.classic_view) }}</span><span data-lang="ru" lang="ru">{{ self.ru(p.plaza.classic_view) }}</span>
+		</a>
+		<button id="lang-toggle" class="chip" type="button">
+			<span data-lang="en" lang="ru">{{ self.ru(p.ui.language_name) }}</span><span data-lang="ru" lang="en">{{ self.en(p.ui.language_name) }}</span>
+		</button>
+	</div>
+
+	<canvas id="plaza" tabindex="0" aria-label="{{ self.en(p.plaza.label) }}" data-en-label="{{ self.en(p.plaza.label) }}" data-ru-label="{{ self.ru(p.plaza.label) }}"></canvas>
+
+	<p id="loading" class="loading">
+		<span data-lang="en">{{ self.en(p.plaza.loading) }}</span><span data-lang="ru" lang="ru">{{ self.ru(p.plaza.loading) }}</span>
+	</p>
+	<noscript><p class="loading">{{ self.en(p.plaza.needs_js) }} / {{ self.ru(p.plaza.needs_js) }}</p></noscript>
+
+	<p id="hint" class="hint">
+		<span data-lang="en"><span class="hint-keys">{{ self.en(p.plaza.hint_keys) }}</span><span class="hint-touch">{{ self.en(p.plaza.hint_touch) }}</span></span>
+		<span data-lang="ru" lang="ru"><span class="hint-keys">{{ self.ru(p.plaza.hint_keys) }}</span><span class="hint-touch">{{ self.ru(p.plaza.hint_touch) }}</span></span>
+	</p>
+
+	<div id="stick" class="stick" aria-hidden="true"><div class="knob"></div></div>
+
+	<div id="panels" aria-live="polite">
+		{{- panels|safe }}
+	</div>
 </body>
 </html>

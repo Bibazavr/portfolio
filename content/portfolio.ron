@@ -407,9 +407,26 @@
         not_found_body: (en: "This page doesn't exist.", ru: "Такой страницы нет."),
         to_resume: (en: "Go to the résumé", ru: "Перейти к резюме"),
         plaza: (en: "Skate plaza", ru: "Скейт-площадка"),
-        plaza_label: (en: "Skate plaza: an interactive version of this résumé", ru: "Скейт-площадка: интерактивная версия резюме"),
+        source: (en: "Source code", ru: "Исходный код"),
+    ),
+
+    // Text that only the plaza (/) shows.
+    plaza: (
+        label: (en: "Skate plaza: an interactive version of this résumé", ru: "Скейт-площадка: интерактивная версия резюме"),
         classic_view: (en: "Classic view", ru: "Классическая версия"),
         loading: (en: "Loading the plaza…", ru: "Загружаем площадку…"),
         needs_js: (en: "The skate plaza needs JavaScript and WebGL.", ru: "Для скейт-площадки нужны JavaScript и WebGL."),
+        hint_keys: (en: "WASD or arrow keys to skate. Roll onto a purple pad to read about it.", ru: "WASD или стрелки — кататься. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),
+        hint_touch: (en: "Use the stick to skate. Roll onto a purple pad to read about it.", ru: "Стик — кататься. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),
+        close: (en: "Close (Esc)", ru: "Закрыть (Esc)"),
+        stairs_title: (en: "LeetCode, in Rust", ru: "LeetCode на Rust"),
+        stairs_body: (
+            en: "Rust is my favourite language. I solve LeetCode problems in it, and this plaza is written in it too: Bevy, compiled to WebAssembly.",
+            ru: "Rust — мой любимый язык. На нём я решаю задачи LeetCode, и эта площадка тоже написана на нём: Bevy, скомпилированный в WebAssembly.",
+        ),
+        // Shown on the stair set next to the LeetCode profile; must match an `open_source` name.
+        stairs_repo: "Bibazavr/leetcode-rust",
+        egg_title: (en: "You found the sticker!", ru: "Стикер найден!"),
+        egg_body: (en: "Bibacode is my Telegram channel.", ru: "Bibacode — мой Telegram-канал."),
     ),
 )

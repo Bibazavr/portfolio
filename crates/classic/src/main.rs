@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
     let home = if plaza {
         let version = build_version(&out, &builds)?;
-        PlazaShell::new(&portfolio, builds, version).render()?
+        PlazaShell::new(&portfolio, builds, version, cv)?.render()?
     } else {
         eprintln!("warning: no plaza build in dist/plaza/, so / forwards to the classic page");
         RedirectPage::new(&portfolio).render()?

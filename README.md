@@ -24,6 +24,15 @@ Bevy picks its renderer at compile time, so the plaza is built twice: `dist/plaz
 WebGPU, and falls back to WebGL2 if WebGPU fails while starting. `?renderer=webgl2` or
 `?renderer=webgpu` forces one, and `?lang=ru` forces the language.
 
+## Spots and panels
+
+Each portfolio spot in the plaza (`crates/plaza/src/spots.rs`) is a trigger zone marked by a
+purple pad. Bevy reports the spot the skater is in through `window.plazaBridge`, and the page shows
+that spot's panel. The panels are plain HTML generated from `portfolio.ron` at build time
+(`crates/classic/templates/panels.html`), in both languages, so links, focus, Esc and screen
+readers work as usual. Spot and panel names come from `content::Spot`, so both sides agree.
+The touch stick is HTML too and passes its position to Bevy through the WASM export `set_stick`.
+
 ## Run locally
 
 Needs Rust, the `wasm32-unknown-unknown` target and [trunk](https://trunkrs.dev).

@@ -5,6 +5,7 @@ use bevy::color::Color;
 pub const ACCENT: Color = Color::srgb_u8(0x78, 0x51, 0xa9);
 pub const ACCENT_LIGHT: Color = Color::srgb_u8(0xb7, 0x96, 0xf0);
 pub const INK: Color = Color::srgb_u8(0x14, 0x17, 0x1a);
+pub const PAPER: Color = Color::srgb_u8(0xfa, 0xfa, 0xf7);
 /// Also the shell page's background, so there's no flash while loading.
 pub const SKY: Color = Color::srgb_u8(0xdd, 0xe3, 0xe8);
 pub const CONCRETE: Color = Color::srgb_u8(0xc4, 0xc7, 0xbf);

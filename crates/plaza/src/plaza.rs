@@ -1,5 +1,5 @@
-//! The plaza: a concrete slab, ledges around the edge and a few obstacles,
-//! all made of primitives.
+//! The plaza itself: a concrete slab, ledges around the edge, sky and sun.
+//! The spots on it live in `spots`.
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -33,9 +33,6 @@ fn spawn(
     };
     let concrete = matte(palette::CONCRETE);
     let concrete_dark = matte(palette::CONCRETE_DARK);
-    let accent = matte(palette::ACCENT);
-    let accent_light = matte(palette::ACCENT_LIGHT);
-    let metal = matte(palette::METAL);
 
     let mut block = |size: Vec3, position: Vec3, material: &Handle<StandardMaterial>| {
         commands.spawn((
@@ -64,41 +61,6 @@ fn spawn(
         (edge.zyx(), HALF_SIZE, 0.0),
     ] {
         block(size, Vec3::new(x, size.y / 2.0, z), &concrete_dark);
-    }
-
-    // Obstacles to skate around.
-    block(
-        Vec3::new(4.0, 0.5, 1.2),
-        Vec3::new(-6.0, 0.25, 6.0),
-        &accent,
-    );
-    block(
-        Vec3::new(2.5, 1.0, 2.5),
-        Vec3::new(8.0, 0.5, -4.0),
-        &accent_light,
-    );
-    // Three steps; the top one is a deep platform.
-    let mut z = -12.0;
-    for (height, depth) in [(0.3, 0.8), (0.6, 0.8), (0.9, 3.0)] {
-        block(
-            Vec3::new(5.0, height, depth),
-            Vec3::new(0.0, height / 2.0, z - depth / 2.0),
-            &concrete_dark,
-        );
-        z -= depth;
-    }
-    // A rail on two posts.
-    block(
-        Vec3::new(0.08, 0.08, 6.0),
-        Vec3::new(-10.0, 0.55, -6.0),
-        &metal,
-    );
-    for z in [-8.5, -3.5] {
-        block(
-            Vec3::new(0.08, 0.5, 0.08),
-            Vec3::new(-10.0, 0.25, z),
-            &metal,
-        );
     }
 
     commands.spawn((

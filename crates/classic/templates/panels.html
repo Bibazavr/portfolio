@@ -1,0 +1,158 @@
+{#- One panel per plaza spot, in one language. The shell shows the panel whose
+    data-spot Bevy reports, and CSS hides the other language. -#}
+{%- let lang = self.code() %}
+{%- let close = self.t(p.plaza.close) %}
+
+<section class="panel" data-spot="{{ self.id(content::Spot::Start) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="start-{{ lang }}" hidden>
+	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+	<p class="eyebrow">{{ self.t(p.identity.location) }}</p>
+	<h2 id="start-{{ lang }}">{{ self.t(p.identity.name) }}</h2>
+	<p class="lede">{{ self.t(p.identity.title) }}</p>
+	<p>{{ self.t(p.identity.summary) }}</p>
+	<ul class="links">
+		{%- for link in p.identity.links %}
+		<li><a href="{{ link.url }}" target="_blank" rel="noopener">{{ self.t(link.label) }}</a></li>
+		{%- endfor %}
+	</ul>
+	<dl class="facts">
+		{%- for fact in p.identity.fun_facts %}
+		<dt>{{ self.t(fact.label) }}</dt>
+		<dd>{{ self.t(fact.value) }}</dd>
+		{%- endfor %}
+	</dl>
+</section>
+
+{%- for (id, stop) in self.career() %}
+<section class="panel" data-spot="{{ id }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="{{ id }}-{{ lang }}" hidden>
+	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+	<p class="eyebrow">{{ self.t(stop.job.company) }} · {{ fmt.stop_period(stop) }}</p>
+	{%- if let Some(project) = stop.project %}
+	<h2 id="{{ id }}-{{ lang }}">{{ self.t(project.name) }}</h2>
+	<p class="meta">
+		{{- self.t(stop.job.role) }}
+		{%- for badge in fmt.badges(project) %} <span class="badge">{{ badge }}</span>{% endfor -%}
+	</p>
+	{%- if let Some(summary) = project.summary %}
+	<p>{{ self.t(summary) }}</p>
+	{%- endif %}
+	<ul class="points">
+		{%- for point in project.points %}
+		<li>{{ self.t(point) }}</li>
+		{%- endfor %}
+	</ul>
+	{%- else %}
+	<h2 id="{{ id }}-{{ lang }}">{{ self.t(stop.job.role) }}</h2>
+	<p class="meta">{{ self.t(stop.job.location) }}</p>
+	<ul class="points">
+		{%- for point in stop.job.points %}
+		<li>{{ self.t(point) }}</li>
+		{%- endfor %}
+	</ul>
+	{%- endif %}
+</section>
+{%- endfor %}
+
+<section class="panel" data-spot="{{ self.id(content::Spot::Gap) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="gap-{{ lang }}" hidden>
+	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+	<h2 id="gap-{{ lang }}">{{ self.t(p.ui.highlights) }}</h2>
+	<ol class="highlights">
+		{%- for highlight in p.highlights %}
+		<li>
+			<h3>{{ self.t(highlight.title) }}</h3>
+			<p>{{ self.t(highlight.body) }}</p>
+		</li>
+		{%- endfor %}
+	</ol>
+</section>
+
+{%- for (id, repo) in self.rails() %}
+<section class="panel" data-spot="{{ id }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="{{ id }}-{{ lang }}" hidden>
+	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+	<p class="eyebrow">{{ self.t(p.ui.open_source) }} · {{ repo.language }}</p>
+	<h2 id="{{ id }}-{{ lang }}" class="repo-name">{{ repo.name }}</h2>
+	<p>{{ self.t(repo.description) }}</p>
+	<ul class="links">
+		<li><a href="{{ repo.url }}" target="_blank" rel="noopener">{{ self.t(p.ui.source) }}</a></li>
+		{%- if let Some(demo) = repo.demo %}
+		<li><a href="{{ demo }}" target="_blank" rel="noopener">{{ self.t(p.ui.demo) }}</a></li>
+		{%- endif %}
+	</ul>
+</section>
+{%- endfor %}
+
+<section class="panel" data-spot="{{ self.id(content::Spot::SkillShop) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="skills-{{ lang }}" hidden>
+	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+	<h2 id="skills-{{ lang }}">{{ self.t(p.ui.skills) }}</h2>
+	<div class="deck">
+		{%- for group in p.skills %}
+		<section class="sticker-group">
+			<h3>{{ self.t(group.name) }}</h3>
+			<ul class="stickers">
+				{%- for item in group.items %}
+				<li>{{ self.t(item) }}</li>
+				{%- endfor %}
+			</ul>
+		</section>
+		{%- endfor %}
+	</div>
+</section>
+
+<section class="panel" data-spot="{{ self.id(content::Spot::Stairs) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="stairs-{{ lang }}" hidden>
+	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+	<h2 id="stairs-{{ lang }}">{{ self.t(p.plaza.stairs_title) }}</h2>
+	<p>{{ self.t(p.plaza.stairs_body) }}</p>
+	<ul class="links">
+		<li><a href="{{ self.leetcode().url }}" target="_blank" rel="noopener">{{ self.t(self.leetcode().label) }}</a></li>
+		<li><a href="{{ self.stairs_repo().url }}" target="_blank" rel="noopener">{{ self.stairs_repo().name }}</a></li>
+	</ul>
+</section>
+
+<section class="panel" data-spot="{{ self.id(content::Spot::Billboard) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="billboard-{{ lang }}" hidden>
+	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+	<p class="eyebrow">{{ self.t(p.ui.apps) }}</p>
+	{%- for app in p.apps %}
+	<div class="app">
+		<img src="/{{ app.icon }}" width="64" height="64" alt="">
+		<div>
+			<h2 id="billboard-{{ lang }}">{{ app.name }}</h2>
+			<p class="meta">{{ self.t(app.tagline) }}</p>
+		</div>
+	</div>
+	<p>{{ self.t(app.description) }}</p>
+	<ul class="stickers">
+		{%- for feature in app.features %}
+		<li>{{ self.t(feature) }}</li>
+		{%- endfor %}
+	</ul>
+	<ul class="links">
+		<li><a href="{{ app.web }}" target="_blank" rel="noopener">{{ self.t(p.ui.open_web) }}</a></li>
+		<li><a href="{{ app.studio }}" target="_blank" rel="noopener">{{ self.t(p.ui.studio_page) }}</a></li>
+	</ul>
+	{%- if let Some(status) = app.status %}
+	<p class="meta">{{ self.t(status) }}</p>
+	{%- endif %}
+	{%- endfor %}
+</section>
+
+<section class="panel" data-spot="{{ self.id(content::Spot::PhoneBooth) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="contact-{{ lang }}" hidden>
+	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+	<h2 id="contact-{{ lang }}">{{ self.t(p.ui.contact) }}</h2>
+	<p class="email"><a href="mailto:{{ p.identity.email }}">{{ p.identity.email }}</a></p>
+	{%- if let Some(cv) = cv %}
+	<p><a class="button" href="/{{ cv }}" download>{{ self.t(p.ui.download_cv) }}</a></p>
+	{%- endif %}
+	<ul class="links">
+		{%- for link in p.identity.links %}
+		<li><a href="{{ link.url }}" target="_blank" rel="noopener">{{ self.t(link.label) }}</a></li>
+		{%- endfor %}
+	</ul>
+</section>
+
+<section class="panel" data-spot="{{ self.id(content::Spot::Sticker) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="sticker-{{ lang }}" hidden>
+	<button class="panel-close" type="button" aria-label="{{ close }}" title="{{ close }}">×</button>
+	<h2 id="sticker-{{ lang }}">{{ self.t(p.plaza.egg_title) }}</h2>
+	<p>{{ self.t(p.plaza.egg_body) }}</p>
+	<ul class="links">
+		<li><a href="{{ self.telegram().url }}" target="_blank" rel="noopener">{{ self.t(self.telegram().label) }}</a></li>
+	</ul>
+</section>

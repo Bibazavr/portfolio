@@ -4,7 +4,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{input::SkaterInput, palette};
+use crate::{input::SkaterInput, palette, spots};
 
 #[derive(Component)]
 pub struct Skater;
@@ -39,7 +39,7 @@ fn spawn(
 
     commands.spawn((
         Skater,
-        Transform::from_xyz(0.0, HEIGHT / 2.0, 12.0),
+        Transform::from_translation(spots::START + Vec3::Y * HEIGHT / 2.0),
         Visibility::default(),
         RigidBody::Dynamic,
         Collider::cuboid(0.5, HEIGHT, 0.9),

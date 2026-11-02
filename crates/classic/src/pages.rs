@@ -1,5 +1,8 @@
 use askama::Template;
-use content::{Education, Job, Lang, Month, Portfolio, Project, ProjectKind, Text};
+use content::{
+    CareerStop, Education, Job, Lang, Link, LinkKind, Month, Portfolio, Project, ProjectKind, Repo,
+    Spot, Text,
+};
 use serde_json::json;
 
 const STYLE: &str = include_str!("../assets/classic.css");
@@ -28,6 +31,7 @@ pub struct ClassicPage<'a> {
     cv: Option<&'a str>,
     /// Whether the plaza was built, so the header can link to it.
     plaza: bool,
+    fmt: Fmt<'a>,
     style: &'static str,
     json_ld: String,
 }
@@ -41,6 +45,7 @@ impl<'a> ClassicPage<'a> {
             lang,
             cv,
             plaza,
+            fmt: Fmt::new(p, lang),
             style: STYLE,
             json_ld: person_json_ld(p, lang),
         }
@@ -90,6 +95,19 @@ impl<'a> ClassicPage<'a> {
         links.push(("x-default", self.url(Lang::En)));
         links
     }
+}
+
+/// Dates and labels shared by the classic page and the plaza's panels.
+#[derive(Clone, Copy)]
+pub struct Fmt<'a> {
+    p: &'a Portfolio,
+    lang: Lang,
+}
+
+impl<'a> Fmt<'a> {
+    pub fn new(p: &'a Portfolio, lang: Lang) -> Self {
+        Self { p, lang }
+    }
 
     fn job_period(&self, job: &Job) -> String {
         self.period(job.start, job.end)
@@ -97,6 +115,15 @@ impl<'a> ClassicPage<'a> {
 
     fn education_period(&self, school: &Education) -> String {
         self.period(school.start, Some(school.end))
+    }
+
+    fn stop_period(&self, stop: &CareerStop) -> String {
+        match stop.project {
+            Some(project) => self
+                .project_period(stop.job, project)
+                .unwrap_or_else(|| self.job_period(stop.job)),
+            None => self.job_period(stop.job),
+        }
     }
 
     /// A project without an end date ran until the job ended.
@@ -197,8 +224,73 @@ impl<'a> NotFoundPage<'a> {
     }
 }
 
-/// The plaza's page at `/`: device check, language, loader and the
-/// always-visible link to the classic page.
+/// The plaza's panels in one language: one per spot, shown by the shell when
+/// Bevy reports the skater is in that spot.
+#[derive(Template)]
+#[template(path = "panels.html")]
+pub struct Panels<'a> {
+    p: &'a Portfolio,
+    lang: Lang,
+    cv: Option<&'a str>,
+    fmt: Fmt<'a>,
+}
+
+impl<'a> Panels<'a> {
+    pub fn new(p: &'a Portfolio, lang: Lang, cv: Option<&'a str>) -> Self {
+        Self {
+            p,
+            lang,
+            cv,
+            fmt: Fmt::new(p, lang),
+        }
+    }
+
+    fn t(&self, text: &'a Text) -> &'a str {
+        text.get(self.lang)
+    }
+
+    fn code(&self) -> &'static str {
+        self.lang.code()
+    }
+
+    fn id(&self, spot: Spot) -> String {
+        spot.id()
+    }
+
+    fn career(&self) -> Vec<(String, CareerStop<'a>)> {
+        let stops = self.p.career().into_iter().enumerate();
+        stops
+            .map(|(i, stop)| (Spot::Career(i).id(), stop))
+            .collect()
+    }
+
+    fn rails(&self) -> Vec<(String, &'a Repo)> {
+        let repos = self.p.open_source.iter().enumerate();
+        repos.map(|(i, repo)| (Spot::Rail(i).id(), repo)).collect()
+    }
+
+    // The content crate's tests check these exist.
+    fn leetcode(&self) -> &'a Link {
+        self.p
+            .identity
+            .link(LinkKind::LeetCode)
+            .expect("LeetCode link")
+    }
+
+    fn telegram(&self) -> &'a Link {
+        self.p
+            .identity
+            .link(LinkKind::Telegram)
+            .expect("Telegram link")
+    }
+
+    fn stairs_repo(&self) -> &'a Repo {
+        self.p.stairs_repo().expect("plaza.stairs_repo")
+    }
+}
+
+/// The plaza's page at `/`: device check, loader, the panels, the touch stick
+/// and the always-visible link to the classic page.
 #[derive(Template)]
 #[template(path = "plaza.html")]
 pub struct PlazaShell<'a> {
@@ -207,11 +299,27 @@ pub struct PlazaShell<'a> {
     builds: Vec<&'static str>,
     /// Cache-busting query for the build files, whose names don't change.
     version: String,
+    /// Rendered [`Panels`] in every language.
+    panels: String,
 }
 
 impl<'a> PlazaShell<'a> {
-    pub fn new(p: &'a Portfolio, builds: Vec<&'static str>, version: String) -> Self {
-        Self { p, builds, version }
+    pub fn new(
+        p: &'a Portfolio,
+        builds: Vec<&'static str>,
+        version: String,
+        cv: Option<&'a str>,
+    ) -> askama::Result<Self> {
+        let panels = Lang::ALL
+            .iter()
+            .map(|&lang| Panels::new(p, lang, cv).render())
+            .collect::<askama::Result<String>>()?;
+        Ok(Self {
+            p,
+            builds,
+            version,
+            panels,
+        })
     }
 
     fn en(&self, text: &'a Text) -> &'a str {

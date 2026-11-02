@@ -89,7 +89,7 @@
 					<li class="card job">
 						<div class="job-head">
 							<h3>{{ self.t(job.role) }}<span class="company">{{ self.t(job.company) }}</span></h3>
-							<p class="meta">{{ self.job_period(job) }} · {{ self.t(job.location) }}</p>
+							<p class="meta">{{ fmt.job_period(job) }} · {{ self.t(job.location) }}</p>
 						</div>
 						{%- if !job.points.is_empty() %}
 						<ul class="points">
@@ -104,10 +104,10 @@
 							<li class="project">
 								<div class="project-head">
 									<h4>{{ self.t(project.name) }}</h4>
-									{%- for badge in self.badges(project) %}
+									{%- for badge in fmt.badges(project) %}
 									<span class="badge">{{ badge }}</span>
 									{%- endfor %}
-									{%- if let Some(period) = self.project_period(job, project) %}
+									{%- if let Some(period) = fmt.project_period(job, project) %}
 									<span class="meta">{{ period }}</span>
 									{%- endif %}
 								</div>
@@ -202,7 +202,7 @@
 				{%- for school in p.education %}
 				<div class="card">
 					<h3>{{ self.t(school.school) }}</h3>
-					<p class="meta">{{ self.t(school.degree) }} · {{ self.education_period(school) }}</p>
+					<p class="meta">{{ self.t(school.degree) }} · {{ fmt.education_period(school) }}</p>
 				</div>
 				{%- endfor %}
 			</div>

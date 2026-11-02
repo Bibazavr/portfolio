@@ -3,9 +3,13 @@
 //! Both views use this crate: the classic page generator renders it to HTML at
 //! build time, and the plaza embeds the same file into its WASM binary.
 
+mod spots;
+
 use std::fmt;
 
 use serde::Deserialize;
+
+pub use spots::{CareerStop, Spot};
 
 /// The raw RON source, embedded at compile time.
 pub const SOURCE: &str = include_str!("../../../content/portfolio.ron");
@@ -169,6 +173,7 @@ pub struct Portfolio {
     pub apps: Vec<App>,
     pub education: Vec<Education>,
     pub ui: Ui,
+    pub plaza: PlazaText,
 }
 
 #[derive(Debug, Deserialize)]
@@ -368,12 +373,29 @@ pub struct Ui {
     pub to_resume: Text,
     /// Link from the classic page to the plaza.
     pub plaza: Text,
+    /// Link to a repository's code.
+    pub source: Text,
+}
+
+/// Text that only the plaza shows.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlazaText {
     /// Accessible name of the plaza's canvas.
-    pub plaza_label: Text,
-    /// The plaza's always-visible link to the classic page.
+    pub label: Text,
+    /// The always-visible link to the classic page.
     pub classic_view: Text,
     pub loading: Text,
     pub needs_js: Text,
+    pub hint_keys: Text,
+    pub hint_touch: Text,
+    pub close: Text,
+    pub stairs_title: Text,
+    pub stairs_body: Text,
+    /// `open_source` name of the repository shown on the stair set.
+    pub stairs_repo: String,
+    pub egg_title: Text,
+    pub egg_body: Text,
 }
 
 #[cfg(test)]
@@ -388,6 +410,35 @@ mod tests {
             starts.is_sorted_by(|a, b| a >= b),
             "experience must be newest first"
         );
+
+        // The plaza's spots need these to exist.
+        assert!(
+            portfolio.stairs_repo().is_some(),
+            "plaza.stairs_repo must name an open_source repo"
+        );
+        for kind in [LinkKind::LeetCode, LinkKind::Telegram] {
+            assert!(
+                portfolio.identity.link(kind).is_some(),
+                "identity.links needs {kind:?}"
+            );
+        }
+        assert!(
+            !portfolio.apps.is_empty(),
+            "the billboard shows the first app"
+        );
+    }
+
+    #[test]
+    fn career_is_oldest_first() {
+        let portfolio = load().unwrap();
+        let starts: Vec<_> = portfolio.career().iter().map(CareerStop::start).collect();
+        assert!(starts.is_sorted());
+        let stops: usize = portfolio
+            .experience
+            .iter()
+            .map(|job| job.projects.len().max(1))
+            .sum();
+        assert_eq!(starts.len(), stops);
     }
 
     #[test]
