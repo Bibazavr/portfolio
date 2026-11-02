@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use crate::{
     Layer, bridge,
     input::SkaterInput,
+    loading::Phase,
     spots::{self, Rails},
 };
 
@@ -149,11 +150,11 @@ impl TrickKind {
 
 pub fn plugin(app: &mut App) {
     app.add_message::<Trick>()
-        .add_systems(Startup, spawn)
-        .add_systems(FixedUpdate, skate);
+        .add_systems(OnEnter(Phase::Playing), spawn)
+        .add_systems(FixedUpdate, skate.run_if(in_state(Phase::Playing)));
 }
 
-fn spawn(mut commands: Commands) {
+pub fn spawn(mut commands: Commands) {
     // The ground probe: a sphere at the capsule's lower end, cast down.
     let probe = ShapeCaster::new(
         Collider::sphere(RADIUS * 0.9),

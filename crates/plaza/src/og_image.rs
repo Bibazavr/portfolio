@@ -1,0 +1,92 @@
+//! Renders the social preview image: `cargo run -p plaza -- --og-image <path>`
+//! frames the plaza from behind the start, renders it into a 1200×630 image
+//! (off-screen, so it doesn't matter whether the window is visible), saves it
+//! to `<path>` and exits. Native only; the README has the follow-up steps.
+
+use std::path::PathBuf;
+
+use bevy::{
+    camera::RenderTarget,
+    prelude::*,
+    render::{
+        render_resource::{TextureFormat, TextureUsages},
+        view::screenshot::{Screenshot, save_to_disk},
+    },
+    window::WindowResolution,
+};
+
+use crate::{camera, loading::Phase};
+
+pub const SIZE: (u32, u32) = (1200, 630);
+/// Frames to wait after the plaza is built, so shaders and shadows are ready.
+const SETTLE_FRAMES: u32 = 90;
+
+#[derive(Resource)]
+struct Shot {
+    path: PathBuf,
+    image: Handle<Image>,
+    frames: u32,
+}
+
+/// The path after `--og-image`, if the app was started to render the preview.
+pub fn requested() -> Option<PathBuf> {
+    let mut args = std::env::args().skip_while(|arg| arg != "--og-image");
+    args.next()?;
+    args.next().map(PathBuf::from)
+}
+
+pub fn window_resolution() -> WindowResolution {
+    WindowResolution::new(SIZE.0, SIZE.1).with_scale_factor_override(1.0)
+}
+
+pub fn plugin(path: PathBuf) -> impl Fn(&mut App) {
+    move |app: &mut App| {
+        let mut image =
+            Image::new_target_texture(SIZE.0, SIZE.1, TextureFormat::Bgra8UnormSrgb, None);
+        // The screenshot copies the texture back from the GPU.
+        image.texture_descriptor.usage |= TextureUsages::COPY_SRC;
+        let image = app.world_mut().resource_mut::<Assets<Image>>().add(image);
+        app.insert_resource(Shot {
+            path: path.clone(),
+            image,
+            frames: 0,
+        })
+        .add_systems(OnEnter(Phase::Playing), render_to_image)
+        .add_systems(
+            PostUpdate,
+            frame_and_shoot
+                .after(camera::follow)
+                .before(TransformSystems::Propagate)
+                .run_if(in_state(Phase::Playing)),
+        );
+    }
+}
+
+fn render_to_image(
+    mut commands: Commands,
+    shot: Res<Shot>,
+    camera: Single<Entity, With<Camera3d>>,
+) {
+    commands
+        .entity(*camera)
+        .insert(RenderTarget::Image(shot.image.clone().into()));
+}
+
+fn frame_and_shoot(
+    mut commands: Commands,
+    mut shot: ResMut<Shot>,
+    mut camera: Single<&mut Transform, With<Camera3d>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    // Behind and above the start, looking across the plaza toward the halfpipe.
+    **camera = Transform::from_xyz(-3.5, 4.0, 27.0).looking_at(Vec3::new(6.0, 0.8, 14.0), Vec3::Y);
+    shot.frames += 1;
+    if shot.frames == SETTLE_FRAMES {
+        commands
+            .spawn(Screenshot::image(shot.image.clone()))
+            .observe(save_to_disk(shot.path.clone()));
+    }
+    if shot.frames == SETTLE_FRAMES + 30 {
+        exit.write(AppExit::Success);
+    }
+}

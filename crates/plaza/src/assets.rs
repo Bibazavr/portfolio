@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use avian3d::prelude::*;
 use bevy::{asset::io::embedded::EmbeddedAssetRegistry, prelude::*};
+use bevy_asset_loader::prelude::*;
 
 macro_rules! embed {
     ($registry:expr, $($file:literal),* $(,)?) => {
@@ -37,27 +38,48 @@ pub fn plugin(app: &mut App) {
     );
 }
 
-/// The path of an embedded model, by file name without `.glb`.
-pub fn model(name: &str) -> String {
-    format!("embedded://models/{name}.glb")
-}
-
-/// A model's scene, ready to spawn with `WorldAssetRoot`.
-pub fn scene(assets: &AssetServer, name: &str) -> Handle<WorldAsset> {
-    assets.load(GltfAssetLabel::Scene(0).from_asset(model(name)))
+/// The models, loaded by bevy_asset_loader before the plaza is built (see `loading`).
+#[derive(AssetCollection, Resource)]
+pub struct Models {
+    #[asset(path = "embedded://models/bench.glb#Scene0")]
+    pub bench: Handle<WorldAsset>,
+    #[asset(path = "embedded://models/character-skate-boy.glb#Scene0")]
+    pub character: Handle<WorldAsset>,
+    #[asset(path = "embedded://models/half-pipe.glb#Scene0")]
+    pub half_pipe: Handle<WorldAsset>,
+    #[asset(path = "embedded://models/obstacle-box.glb#Scene0")]
+    pub obstacle_box: Handle<WorldAsset>,
+    #[asset(path = "embedded://models/rail-low.glb#Scene0")]
+    pub rail_low: Handle<WorldAsset>,
+    #[asset(path = "embedded://models/ramp.glb#Scene0")]
+    pub ramp: Handle<WorldAsset>,
+    #[asset(path = "embedded://models/skateboard.glb#Scene0")]
+    pub skateboard: Handle<WorldAsset>,
+    #[asset(path = "embedded://models/steps.glb#Scene0")]
+    pub steps: Handle<WorldAsset>,
+    #[asset(path = "embedded://models/vehicle.glb#Scene0")]
+    pub vehicle: Handle<WorldAsset>,
+    // The character's animations, by their index in the pack.
+    #[asset(path = "embedded://models/character-skate-boy.glb#Animation1")]
+    pub idle: Handle<AnimationClip>,
+    #[asset(path = "embedded://models/character-skate-boy.glb#Animation4")]
+    pub jump: Handle<AnimationClip>,
+    #[asset(path = "embedded://models/character-skate-boy.glb#Animation5")]
+    pub fall: Handle<AnimationClip>,
+    #[asset(path = "embedded://models/character-skate-boy.glb#Animation6")]
+    pub crouch: Handle<AnimationClip>,
 }
 
 /// Spawns a model that doesn't move. With a `collider`, colliders are built
-/// from its meshes once it loads: a convex hull for simple solid shapes, a
+/// from its meshes once it spawns: a convex hull for simple solid shapes, a
 /// triangle mesh for curved or stepped ones.
 pub fn prop(
     commands: &mut Commands,
-    assets: &AssetServer,
-    name: &str,
+    scene: &Handle<WorldAsset>,
     transform: Transform,
     collider: Option<ColliderConstructor>,
 ) {
-    let mut prop = commands.spawn((WorldAssetRoot(scene(assets, name)), transform));
+    let mut prop = commands.spawn((WorldAssetRoot(scene.clone()), transform));
     if let Some(constructor) = collider {
         prop.insert((
             RigidBody::Static,

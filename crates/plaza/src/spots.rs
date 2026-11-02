@@ -12,7 +12,14 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use content::Spot;
 
-use crate::{Layer, assets, bridge, palette, skater::Skater};
+use crate::{
+    Layer,
+    assets::{self, Models},
+    bridge,
+    loading::Phase,
+    palette,
+    skater::Skater,
+};
 
 /// Where the skater starts, inside the start ledge's zone.
 pub const START: Vec3 = Vec3::new(0.0, 0.0, 20.5);
@@ -57,21 +64,26 @@ impl Rail {
 }
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(Startup, spawn)
+    app.add_systems(OnEnter(Phase::Playing), spawn)
         .add_systems(Update, track_zones);
 }
 
 /// Spawns props with shared materials.
 struct Builder<'w, 's, 'a> {
     commands: Commands<'w, 's>,
-    assets: &'a AssetServer,
+    models: &'a Models,
     meshes: &'a mut Assets<Mesh>,
     pad: Handle<StandardMaterial>,
 }
 
 impl Builder<'_, '_, '_> {
-    fn prop(&mut self, name: &str, transform: Transform, collider: Option<ColliderConstructor>) {
-        assets::prop(&mut self.commands, self.assets, name, transform, collider);
+    fn prop(
+        &mut self,
+        scene: fn(&Models) -> &Handle<WorldAsset>,
+        transform: Transform,
+        collider: Option<ColliderConstructor>,
+    ) {
+        assets::prop(&mut self.commands, scene(self.models), transform, collider);
     }
 
     /// A static box `size` wide, tall and deep, with its bottom centre at `at`.
@@ -127,7 +139,7 @@ impl Builder<'_, '_, '_> {
 
 fn spawn(
     commands: Commands,
-    assets: Res<AssetServer>,
+    models: Res<Models>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -153,7 +165,7 @@ fn spawn(
     });
     let mut b = Builder {
         commands,
-        assets: &assets,
+        models: &models,
         meshes: &mut meshes,
         pad,
     };
@@ -163,7 +175,7 @@ fn spawn(
     let ledge = Transform::from_xyz(0.0, 0.0, 24.5)
         .with_rotation(Quat::from_rotation_y(FRAC_PI_2))
         .with_scale(Vec3::new(1.4, 2.2, 5.0));
-    b.prop("obstacle-box", ledge, hull.clone());
+    b.prop(|m| &m.obstacle_box, ledge, hull.clone());
     b.zone(
         Spot::Start,
         Vec2::new(START.x, 21.5),
@@ -186,7 +198,7 @@ fn spawn(
         let kicker = Transform::from_xyz(x, 0.0, CAREER_Z)
             .with_rotation(Quat::from_rotation_y(-FRAC_PI_2))
             .with_scale(Vec3::new(2.2, 1.3, 1.8));
-        b.prop("ramp", kicker, hull.clone());
+        b.prop(|m| &m.ramp, kicker, hull.clone());
         b.zone(
             Spot::Career(i),
             Vec2::new(x, CAREER_Z),
@@ -231,7 +243,7 @@ fn spawn(
         let x = -25.0 + i as f32 * 2.5;
         let at = Vec3::new(x, 0.0, -12.0);
         b.prop(
-            "rail-low",
+            |m| &m.rail_low,
             Transform::from_translation(at).with_scale(rail_scale),
             None,
         );
@@ -315,7 +327,11 @@ fn spawn(
 
     // Stair set: Kenney's three steps, rising toward −Z.
     let steps = Transform::from_xyz(20.0, 0.0, -12.25).with_scale(Vec3::new(5.0, 3.0, 4.5));
-    b.prop("steps", steps, Some(ColliderConstructor::TrimeshFromMesh));
+    b.prop(
+        |m| &m.steps,
+        steps,
+        Some(ColliderConstructor::TrimeshFromMesh),
+    );
     b.zone(
         Spot::Stairs,
         Vec2::new(20.0, -8.0),

@@ -48,6 +48,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         );
     }
 
+    let og_image = static_dir
+        .join(&portfolio.site.og_image)
+        .is_file()
+        .then(|| format!("{site_url}/{}", portfolio.site.og_image));
+    if og_image.is_none() {
+        eprintln!(
+            "warning: static/{} is missing, so pages have no preview image",
+            portfolio.site.og_image
+        );
+    }
+
     let stats = Stats::read(&root.join("content/stats.json")).unwrap_or_else(|e| {
         eprintln!("warning: {e}; leaving the stats out");
         None
@@ -60,7 +71,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         let dir = out.join(pages::classic_path(lang).trim_start_matches('/'));
         write(
             &dir.join("index.html"),
-            &ClassicPage::new(&portfolio, lang, cv, plaza, stats.as_ref()).render()?,
+            &ClassicPage::new(
+                &portfolio,
+                lang,
+                cv,
+                plaza,
+                stats.as_ref(),
+                og_image.as_deref(),
+            )
+            .render()?,
         )?;
     }
     write(
@@ -69,7 +88,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
     let home = if plaza {
         let version = build_version(&out, &builds)?;
-        PlazaShell::new(&portfolio, builds, version, cv, stats.as_ref())?.render()?
+        PlazaShell::new(
+            &portfolio,
+            builds,
+            version,
+            cv,
+            stats.as_ref(),
+            og_image.as_deref(),
+        )?
+        .render()?
     } else {
         eprintln!("warning: no plaza build in dist/plaza/, so / forwards to the classic page");
         RedirectPage::new(&portfolio).render()?
@@ -85,9 +112,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Finds the plaza builds and removes what trunk leaves next to them: its
-/// `index.html` is a dev page, and the shell page loads the builds instead.
-fn plaza_builds(out: &Path) -> io::Result<Vec<&'static str>> {
+/// Finds the plaza builds, with the size of each one's WASM, and removes what
+/// trunk leaves next to them: its `index.html` is a dev page, and the shell
+/// page loads the builds instead.
+fn plaza_builds(out: &Path) -> io::Result<Vec<(&'static str, u64)>> {
     let mut builds = Vec::new();
     for renderer in RENDERERS {
         let dir = out.join("plaza").join(renderer);
@@ -100,16 +128,16 @@ fn plaza_builds(out: &Path) -> io::Result<Vec<&'static str>> {
                 _ => {}
             }
         }
-        builds.push(renderer);
+        builds.push((renderer, fs::metadata(dir.join("plaza_bg.wasm"))?.len()));
     }
     Ok(builds)
 }
 
 /// A hash of the build files. GitHub Pages caches for 10 minutes and trunk's
 /// names don't change, so the shell adds this to the URLs it loads.
-fn build_version(out: &Path, builds: &[&str]) -> io::Result<String> {
+fn build_version(out: &Path, builds: &[(&str, u64)]) -> io::Result<String> {
     let mut hasher = DefaultHasher::new();
-    for renderer in builds {
+    for (renderer, _) in builds {
         for file in ["plaza.js", "plaza_bg.wasm"] {
             hasher.write(&fs::read(out.join("plaza").join(renderer).join(file))?);
         }

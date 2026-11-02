@@ -23,7 +23,15 @@
 	<meta property="og:locale" content="{{ self.og_locale() }}">
 	<meta property="og:locale:alternate" content="{{ self.og_locale_alternate() }}">
 	<meta property="profile:username" content="{{ p.identity.handle }}">
+	{%- if let Some(image) = og_image %}
+	<meta property="og:image" content="{{ image }}">
+	<meta property="og:image:width" content="1200">
+	<meta property="og:image:height" content="630">
+	<meta property="og:image:alt" content="{{ self.t(p.plaza.label) }}">
+	<meta name="twitter:card" content="summary_large_image">
+	{%- else %}
 	<meta name="twitter:card" content="summary">
+	{%- endif %}
 
 	<style>{{ style|safe }}</style>
 	<script type="application/ld+json">{{ json_ld|safe }}</script>
@@ -255,5 +263,8 @@
 			<p>{{ self.t(p.ui.footer_note) }}</p>
 		</div>
 	</footer>
+	{%- if let Some(token) = p.site.cloudflare_analytics %}
+	<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "{{ token }}"}'></script>
+	{%- endif %}
 </body>
 </html>

@@ -58,7 +58,7 @@ fn spawn(mut commands: Commands) {
     ));
 }
 
-fn follow(
+pub fn follow(
     time: Res<Time>,
     skater: Single<&Transform, (With<Skater>, Without<Camera3d>)>,
     mut camera: Single<&mut Transform, With<Camera3d>>,

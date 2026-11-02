@@ -28,6 +28,11 @@ pub fn trick(kind: &str, points: u32, total: u32) {
     imp::trick(kind, points, total);
 }
 
+/// The plaza is built and drawing; the page can drop its loading screen.
+pub fn ready() {
+    imp::ready();
+}
+
 /// The touch stick, with `y` pointing up, or zero when it isn't held.
 pub fn stick() -> Vec2 {
     imp::stick()
@@ -58,6 +63,8 @@ mod imp {
         pub fn motion(speed: f32, rolling: bool, grinding: bool);
         #[wasm_bindgen(js_namespace = plazaBridge)]
         pub fn trick(kind: &str, points: u32, total: u32);
+        #[wasm_bindgen(js_namespace = plazaBridge)]
+        pub fn ready();
     }
 
     thread_local! {
@@ -104,6 +111,10 @@ mod imp {
 
     pub fn trick(kind: &str, points: u32, total: u32) {
         info!("{kind} +{points} = {total}");
+    }
+
+    pub fn ready() {
+        info!("ready");
     }
 
     pub fn stick() -> Vec2 {

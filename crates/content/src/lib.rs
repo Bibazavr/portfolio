@@ -185,6 +185,10 @@ pub struct Site {
     pub url: Url,
     /// CV download, relative to the site root.
     pub cv: String,
+    /// Social preview image, relative to the site root.
+    pub og_image: String,
+    /// Cloudflare Web Analytics beacon token; no analytics without one.
+    pub cloudflare_analytics: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -395,6 +399,7 @@ pub struct PlazaText {
     /// The always-visible link to the classic page.
     pub classic_view: Text,
     pub loading: Text,
+    pub load_failed: Text,
     pub needs_js: Text,
     pub hint_keys: Text,
     pub hint_touch: Text,

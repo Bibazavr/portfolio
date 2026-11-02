@@ -7,7 +7,11 @@ use std::f32::consts::{FRAC_PI_2, PI};
 use avian3d::prelude::*;
 use bevy::{light::CascadeShadowConfigBuilder, prelude::*};
 
-use crate::{assets, palette};
+use crate::{
+    assets::{self, Models},
+    loading::Phase,
+    palette,
+};
 
 /// Half the side of the square plaza, in metres.
 const HALF_SIZE: f32 = 30.0;
@@ -22,12 +26,12 @@ pub fn plugin(app: &mut App) {
             brightness: 300.0,
             ..default()
         })
-        .add_systems(Startup, spawn);
+        .add_systems(OnEnter(Phase::Playing), spawn);
 }
 
 fn spawn(
     mut commands: Commands,
-    assets: Res<AssetServer>,
+    models: Res<Models>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -97,8 +101,7 @@ fn spawn(
                 .with_scale(scale);
             assets::prop(
                 &mut commands,
-                &assets,
-                "half-pipe",
+                &models.half_pipe,
                 transform,
                 Some(ColliderConstructor::TrimeshFromMesh),
             );
@@ -112,8 +115,7 @@ fn spawn(
             .with_scale(Vec3::splat(2.0));
         assets::prop(
             &mut commands,
-            &assets,
-            "bench",
+            &models.bench,
             transform,
             Some(ColliderConstructor::ConvexHullFromMesh),
         );
@@ -124,8 +126,7 @@ fn spawn(
         .with_scale(Vec3::splat(car_scale));
     assets::prop(
         &mut commands,
-        &assets,
-        "vehicle",
+        &models.vehicle,
         car,
         Some(ColliderConstructor::ConvexHullFromMesh),
     );

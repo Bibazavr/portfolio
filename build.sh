@@ -8,7 +8,15 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 plaza() {
-	(cd crates/plaza && trunk build --release --no-default-features --features "$1" --dist "../../dist/plaza/$1")
+	# Keeps the machine's paths (home folder, checkout) out of the shipped binary.
+	local registry="${CARGO_HOME:-$HOME/.cargo}/registry/src"
+	local std_source
+	std_source="$(rustc --print sysroot)/lib/rustlib/src/rust"
+	(
+		export RUSTFLAGS="--remap-path-prefix=$registry= --remap-path-prefix=$std_source=rust --remap-path-prefix=$PWD="
+		cd crates/plaza
+		trunk build --release --no-default-features --features "$1" --dist "../../dist/plaza/$1"
+	)
 }
 
 site() {

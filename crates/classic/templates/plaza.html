@@ -15,7 +15,15 @@
 	<meta property="og:url" content="{{ p.site.url }}/">
 	<meta property="og:site_name" content="{{ p.identity.handle }}">
 	<meta property="profile:username" content="{{ p.identity.handle }}">
+	{%- if let Some(image) = og_image %}
+	<meta property="og:image" content="{{ image }}">
+	<meta property="og:image:width" content="1200">
+	<meta property="og:image:height" content="630">
+	<meta property="og:image:alt" content="{{ self.en(p.plaza.label) }}">
+	<meta name="twitter:card" content="summary_large_image">
+	{%- else %}
 	<meta name="twitter:card" content="summary">
+	{%- endif %}
 
 	<style>
 		/* The background matches the plaza's sky, so loading doesn't flash. */
@@ -154,16 +162,44 @@
 			display: grid;
 		}
 
+		/* Covers the canvas until the plaza has drawn its first frames. */
 		.loading {
 			position: fixed;
+			z-index: 1;
 			inset: 0;
 			display: grid;
-			place-items: center;
+			place-content: center;
+			gap: 14px;
 			margin: 0;
 			padding: 0 24px;
-			text-align: center;
+			background: #dde3e8;
 			color: var(--muted);
-			pointer-events: none;
+			text-align: center;
+		}
+
+		.loading p {
+			margin: 0;
+		}
+
+		.bar {
+			justify-self: center;
+			width: min(280px, 70vw);
+			height: 6px;
+			overflow: hidden;
+			border-radius: 999px;
+			background: rgb(20 23 26 / 0.12);
+		}
+
+		.fill {
+			height: 100%;
+			background: var(--accent);
+			transform: scaleX(0);
+			transform-origin: left;
+			transition: transform 0.2s;
+		}
+
+		.loading a {
+			color: var(--link);
 		}
 
 		.hint {
@@ -776,12 +812,29 @@
 				plaza?.ollie();
 			});
 
+			// Loading screen: the WASM download is most of the wait, so the bar follows it,
+			// then waits for Bevy to report that the plaza is built and drawing.
+			const loading = document.getElementById('loading');
+			const fill = document.getElementById('loading-fill');
+			function setProgress(fraction) {
+				fill.style.transform = `scaleX(${fraction})`;
+				loading.setAttribute('aria-valuenow', Math.round(fraction * 100));
+			}
+			function finishLoading() {
+				if (loading.hidden) return;
+				setProgress(1);
+				loading.hidden = true;
+				canvas.focus({ preventScroll: true });
+			}
+			window.plazaBridge.ready = finishLoading;
+
 			// Bevy fixes the renderer at compile time, so there is one build per renderer.
+			// Sizes are the uncompressed WASM, since the server may gzip it.
 			const builds = {{ self.builds_json()|safe }};
 			async function pickRenderer() {
 				const forced = params.get('renderer');
-				if (builds.includes(forced)) return forced;
-				if (builds.includes('webgpu') && navigator.gpu) {
+				if (forced in builds) return forced;
+				if ('webgpu' in builds && navigator.gpu) {
 					try {
 						if (await navigator.gpu.requestAdapter()) return 'webgpu';
 					} catch (error) {}
@@ -800,17 +853,49 @@
 				setTimeout(() => removeEventListener('error', fallBack), 20000);
 			}
 
-			const base = `/plaza/${renderer}/`;
-			const module = await import(`${base}plaza.js?v={{ version }}`);
-			try {
-				await module.default({ module_or_path: `${base}plaza_bg.wasm?v={{ version }}` });
-			} catch (error) {
-				// winit leaves Rust's event loop by throwing; that one isn't a failure.
-				if (!String(error).includes('Using exceptions for control flow')) throw error;
+			async function download(url, size) {
+				const response = await fetch(url);
+				if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+				const reader = response.body.getReader();
+				const chunks = [];
+				let received = 0;
+				for (;;) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					chunks.push(value);
+					received += value.length;
+					setProgress(0.9 * Math.min(received / size, 1));
+				}
+				const bytes = new Uint8Array(received);
+				let offset = 0;
+				for (const chunk of chunks) {
+					bytes.set(chunk, offset);
+					offset += chunk.length;
+				}
+				return bytes;
 			}
-			plaza = module;
-			document.getElementById('loading').hidden = true;
-			canvas.focus({ preventScroll: true });
+
+			const base = `/plaza/${renderer}/`;
+			try {
+				const [module, wasm] = await Promise.all([
+					import(`${base}plaza.js?v={{ version }}`),
+					download(`${base}plaza_bg.wasm?v={{ version }}`, builds[renderer]),
+				]);
+				plaza = module;
+				try {
+					await module.default({ module_or_path: wasm });
+				} catch (error) {
+					// winit leaves Rust's event loop by throwing; that one isn't a failure.
+					if (!String(error).includes('Using exceptions for control flow')) throw error;
+				}
+				setProgress(0.95);
+				// Should Bevy never report back, don't leave the screen covered.
+				setTimeout(finishLoading, 30000);
+			} catch (error) {
+				document.getElementById('loading-text').hidden = true;
+				document.getElementById('load-failed').hidden = false;
+				throw error;
+			}
 		}
 	</script>
 </head>
@@ -837,9 +922,15 @@
 
 	<canvas id="plaza" tabindex="0" aria-label="{{ self.en(p.plaza.label) }}" data-en-label="{{ self.en(p.plaza.label) }}" data-ru-label="{{ self.ru(p.plaza.label) }}"></canvas>
 
-	<p id="loading" class="loading">
-		<span data-lang="en">{{ self.en(p.plaza.loading) }}</span><span data-lang="ru" lang="ru">{{ self.ru(p.plaza.loading) }}</span>
-	</p>
+	<div id="loading" class="loading" role="progressbar" aria-labelledby="loading-text" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+		<p id="loading-text">
+			<span data-lang="en">{{ self.en(p.plaza.loading) }}</span><span data-lang="ru" lang="ru">{{ self.ru(p.plaza.loading) }}</span>
+		</p>
+		<div class="bar"><div id="loading-fill" class="fill"></div></div>
+		<p id="load-failed" hidden>
+			<span data-lang="en">{{ self.en(p.plaza.load_failed) }}</span><span data-lang="ru" lang="ru">{{ self.ru(p.plaza.load_failed) }}</span>
+		</p>
+	</div>
 	<noscript><p class="loading">{{ self.en(p.plaza.needs_js) }} / {{ self.ru(p.plaza.needs_js) }}</p></noscript>
 
 	<p id="hint" class="hint">
@@ -855,5 +946,8 @@
 	<div id="panels" aria-live="polite">
 		{{- panels|safe }}
 	</div>
+	{%- if let Some(token) = p.site.cloudflare_analytics %}
+	<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "{{ token }}"}'></script>
+	{%- endif %}
 </body>
 </html>

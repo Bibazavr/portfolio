@@ -18,7 +18,9 @@
 			trick: (kind, points, total) => console.log(`${kind} +${points} = ${total}`),
 		};
 	</script>
-	<link data-trunk rel="rust" data-bin="plaza" data-type="main">
+	<!-- wasm-opt needs the WebAssembly features rustc's wasm32 target emits by default. -->
+	<link data-trunk rel="rust" data-bin="plaza" data-type="main" data-wasm-opt="z"
+		data-wasm-opt-params="--enable-bulk-memory --enable-bulk-memory-opt --enable-nontrapping-float-to-int --enable-sign-ext --enable-mutable-globals --enable-reference-types --enable-multivalue">
 	<style>
 		html, body { margin: 0; height: 100%; overflow: hidden; background: #dde3e8; }
 		canvas { display: block; width: 100%; height: 100%; outline: none; }

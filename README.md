@@ -55,6 +55,35 @@ air), and locks onto a rail when it comes down on one. Ollies, airs, gaps and gr
 Sound is synthesised in the page with Web Audio, so there are no audio files; it starts after the
 first tap or key press, as browsers require, and the speaker button mutes it.
 
+## Size and loading
+
+Release builds are the plaza's WASM: `opt-level = "z"`, LTO, one codegen unit and stripped
+symbols, then `wasm-opt -Oz` (see `crates/plaza/index.html`), with only the Bevy features the plaza
+uses and info/debug logging compiled out. Each renderer's build is about 19 MB, 5.7 MB gzipped.
+`build.sh` remaps local paths out of the binary.
+
+The page downloads the WASM itself to show real progress (the shell knows each build's size), then
+bevy_asset_loader loads the models before the plaza is built, and Bevy tells the page when it has
+drawn its first frames so the loading screen can go.
+
+## Social preview
+
+`static/og.jpg` is a 1200×630 shot of the plaza, used for `og:image` on every page. To redo it after
+changing the plaza:
+
+```bash
+cargo run -p plaza -- --og-image /tmp/og.png
+```
+
+```bash
+sips -s format jpeg -s formatOptions 82 /tmp/og.png --out static/og.jpg
+```
+
+## Analytics
+
+Cloudflare Web Analytics (cookie-free, no banner). The beacon token is `site.cloudflare_analytics`
+in `portfolio.ron`; remove it to turn analytics off.
+
 ## Run locally
 
 Needs Rust, the `wasm32-unknown-unknown` target and [trunk](https://trunkrs.dev).

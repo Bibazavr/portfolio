@@ -7,8 +7,9 @@ use avian3d::prelude::*;
 use bevy::{prelude::*, world_serialization::WorldInstanceReady};
 
 use crate::{
-    assets,
-    skater::{Board, HEIGHT, Motion, Skater},
+    assets::Models,
+    loading::Phase,
+    skater::{self, Board, HEIGHT, Motion, Skater},
 };
 
 /// Kenney's kid is 0.78 m tall; this makes them about 1.2 m.
@@ -19,13 +20,12 @@ const DECK: f32 = 0.16 * SCALE;
 const TILT_RATE: f32 = 12.0;
 const BLEND: Duration = Duration::from_millis(150);
 
-/// Animations in the character's file, by their index in the pack.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Pose {
-    Idle = 1,
-    Jump = 4,
-    Fall = 5,
-    Crouch = 6,
+    Idle,
+    Jump,
+    Fall,
+    Crouch,
 }
 
 const POSES: [Pose; 4] = [Pose::Idle, Pose::Jump, Pose::Fall, Pose::Crouch];
@@ -55,19 +55,22 @@ struct Rig;
 struct Current(Pose);
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(PostStartup, spawn)
-        .add_systems(Update, (lean, animate));
+    app.add_systems(OnEnter(Phase::Playing), spawn.after(skater::spawn))
+        .add_systems(Update, (lean, animate).run_if(in_state(Phase::Playing)));
 }
 
 fn spawn(
     mut commands: Commands,
-    assets: Res<AssetServer>,
+    models: Res<Models>,
     mut graphs: ResMut<Assets<AnimationGraph>>,
     skater: Single<Entity, With<Skater>>,
 ) {
-    let file = assets::model("character-skate-boy");
-    let clips = POSES
-        .map(|pose| assets.load(GltfAssetLabel::Animation(pose as usize).from_asset(file.clone())));
+    let clips = POSES.map(|pose| match pose {
+        Pose::Idle => models.idle.clone(),
+        Pose::Jump => models.jump.clone(),
+        Pose::Fall => models.fall.clone(),
+        Pose::Crouch => models.crouch.clone(),
+    });
     let (graph, nodes) = AnimationGraph::from_clips(clips);
     commands.insert_resource(Poses {
         graph: graphs.add(graph),
@@ -83,14 +86,14 @@ fn spawn(
         ))
         .id();
     commands.spawn((
-        WorldAssetRoot(assets::scene(&assets, "skateboard")),
+        WorldAssetRoot(models.skateboard.clone()),
         Transform::from_scale(Vec3::splat(SCALE)),
         ChildOf(rig),
     ));
     // Side-on to the direction of travel, like a skater stands.
     commands
         .spawn((
-            WorldAssetRoot(assets::scene(&assets, "character-skate-boy")),
+            WorldAssetRoot(models.character.clone()),
             Transform::from_xyz(0.0, DECK, 0.0)
                 .with_rotation(Quat::from_rotation_y(FRAC_PI_2))
                 .with_scale(Vec3::splat(SCALE)),

@@ -8,6 +8,11 @@
     site: (
         url: "https://me.bibazavr.fyi",
         cv: "cv/kirill-lebedev-cv.pdf",
+        // Social preview, relative to the site root (1200×630). Rendered with
+        // `cargo run -p plaza -- --og-image`; see the README.
+        og_image: "og.jpg",
+        // Cloudflare Web Analytics beacon token (cookie-free). Leave it out to turn analytics off.
+        cloudflare_analytics: "0de842316b074e8bb7d1db35ee3d711c",
     ),
 
     identity: (
@@ -423,6 +428,7 @@
         label: (en: "Skate plaza: an interactive version of this résumé", ru: "Скейт-площадка: интерактивная версия резюме"),
         classic_view: (en: "Classic view", ru: "Классическая версия"),
         loading: (en: "Loading the plaza…", ru: "Загружаем площадку…"),
+        load_failed: (en: "The plaza couldn't load in this browser. The classic view has everything.", ru: "Площадка не загрузилась в этом браузере. В классической версии есть всё то же самое."),
         needs_js: (en: "The skate plaza needs JavaScript and WebGL.", ru: "Для скейт-площадки нужны JavaScript и WebGL."),
         hint_keys: (en: "WASD or arrow keys to skate, Space to ollie. Roll onto a purple pad to read about it.", ru: "WASD или стрелки — кататься, пробел — олли. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),
         hint_touch: (en: "Stick to skate, button to ollie. Roll onto a purple pad to read about it.", ru: "Стик — кататься, кнопка — олли. Заезжайте на фиолетовую площадку, чтобы прочитать о ней."),

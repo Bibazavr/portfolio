@@ -31,6 +31,8 @@ pub struct ClassicPage<'a> {
     cv: Option<&'a str>,
     /// Whether the plaza was built, so the header can link to it.
     plaza: bool,
+    /// Absolute URL of the social preview image, if there is one.
+    og_image: Option<&'a str>,
     fmt: Fmt<'a>,
     style: &'static str,
     json_ld: String,
@@ -45,12 +47,14 @@ impl<'a> ClassicPage<'a> {
         cv: Option<&'a str>,
         plaza: bool,
         stats: Option<&'a Stats>,
+        og_image: Option<&'a str>,
     ) -> Self {
         Self {
             p,
             lang,
             cv,
             plaza,
+            og_image,
             fmt: Fmt::new(p, lang, stats),
             style: STYLE,
             json_ld: person_json_ld(p, lang),
@@ -366,21 +370,25 @@ impl<'a> Panels<'a> {
 #[template(path = "plaza.html")]
 pub struct PlazaShell<'a> {
     p: &'a Portfolio,
-    /// Renderers with a build in `dist/plaza/<renderer>/`.
-    builds: Vec<&'static str>,
+    /// Renderers with a build in `dist/plaza/<renderer>/`, and the size of
+    /// each build's WASM, for the loading screen's progress.
+    builds: Vec<(&'static str, u64)>,
     /// Cache-busting query for the build files, whose names don't change.
     version: String,
     /// Rendered [`Panels`] in every language.
     panels: String,
+    /// Absolute URL of the social preview image, if there is one.
+    og_image: Option<&'a str>,
 }
 
 impl<'a> PlazaShell<'a> {
     pub fn new(
         p: &'a Portfolio,
-        builds: Vec<&'static str>,
+        builds: Vec<(&'static str, u64)>,
         version: String,
         cv: Option<&'a str>,
         stats: Option<&'a Stats>,
+        og_image: Option<&'a str>,
     ) -> askama::Result<Self> {
         let panels = Lang::ALL
             .iter()
@@ -391,6 +399,7 @@ impl<'a> PlazaShell<'a> {
             builds,
             version,
             panels,
+            og_image,
         })
     }
 
@@ -410,8 +419,14 @@ impl<'a> PlazaShell<'a> {
         classic_path(Lang::Ru)
     }
 
+    /// `{ "webgl2": <bytes>, … }`.
     fn builds_json(&self) -> String {
-        serde_json::to_string(&self.builds).expect("strings serialize")
+        let builds: serde_json::Map<_, _> = self
+            .builds
+            .iter()
+            .map(|&(renderer, size)| (renderer.to_owned(), json!(size)))
+            .collect();
+        serde_json::Value::Object(builds).to_string()
     }
 
     /// `{ "en": { "ollie": "Ollie", … }, "ru": { … } }` for the score counter.
