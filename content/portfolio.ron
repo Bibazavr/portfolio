@@ -95,8 +95,8 @@
                     name: (en: "Social-dining platform", ru: "Платформа совместных ужинов"),
                     kind: Client,
                     nda: true,
-                    start: "2026",
-                    end: "2026",
+                    start: "2026-08",
+                    end: "2026-10",
                     points: [
                         (en: "Rewrote a no-code website into one Expo codebase that ships the iOS app, the Android app and the website.", ru: "Переписал сайт с no-code-платформы на единую кодовую базу Expo, из которой собираются приложения для iOS и Android и сам сайт."),
                         (en: "Server-rendered web with API routes on EAS Hosting.", ru: "Серверный рендеринг веба и API-роуты на EAS Hosting."),
@@ -107,8 +107,8 @@
                     name: (en: "Messenger app", ru: "Мессенджер"),
                     kind: Client,
                     nda: true,
-                    start: "2025",
-                    end: "2026",
+                    start: "2026-01",
+                    end: "2026-08",
                     summary: (
                         en: "A production chat app on bare React Native (no Expo), with more than 2,000 commits on the team.",
                         ru: "Мессенджер в продакшене на bare React Native (без Expo); у команды более 2000 коммитов.",
