@@ -117,6 +117,8 @@
                 (
                     name: (en: "Call center app", ru: "Приложение для колл-центра"),
                     kind: Client,
+                    start: "2025-10",
+                    end: "2025-12",
                     points: [
                         (en: "Rewrote it from React Native 0.69 to the newest Expo SDK.", ru: "Переписал приложение с React Native 0.69 на актуальный Expo SDK."),
                         (en: "Set up CI/CD.", ru: "Настроил CI/CD."),
