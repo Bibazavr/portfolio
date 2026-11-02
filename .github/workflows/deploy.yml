@@ -14,24 +14,62 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+env:
+  TRUNK_VERSION: 0.22.1
+
 jobs:
-  build:
+  plaza:
+    name: Plaza (${{ matrix.renderer }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        renderer: [webgl2, webgpu]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.renderer }}
+      - name: Install trunk
+        run: |
+          curl -fsSL "https://github.com/trunk-rs/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C /usr/local/bin trunk
+      - run: cargo fetch --locked
+      - run: ./build.sh plaza ${{ matrix.renderer }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: plaza-${{ matrix.renderer }}
+          path: dist/plaza/${{ matrix.renderer }}
+          retention-days: 1
+
+  site:
+    needs: plaza
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Test content
-        run: cargo test --locked
-      - name: Build classic page
-        run: cargo run --locked -p classic -- dist
+        run: cargo test --locked -p content -p classic
+      - uses: actions/download-artifact@v8
+        with:
+          name: plaza-webgl2
+          path: dist/plaza/webgl2
+      - uses: actions/download-artifact@v8
+        with:
+          name: plaza-webgpu
+          path: dist/plaza/webgpu
+      - name: Build classic page and shell
+        run: ./build.sh site
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
   deploy:
-    needs: build
+    needs: site
     runs-on: ubuntu-latest
     environment:
       name: github-pages

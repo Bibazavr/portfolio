@@ -141,8 +141,16 @@ h4 {
 	flex: none;
 }
 
+.header-links {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
 .crumb {
 	color: var(--muted);
+	white-space: nowrap;
 	font-size: 15px;
 	padding: 6px 12px;
 	border: 1px solid var(--border);
@@ -551,6 +559,16 @@ h4 {
 
 	.wrap {
 		padding: 0 16px;
+	}
+
+	/* Keeps the header links on one line; screen readers still get the name. */
+	.brand-name {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 
 	.hero {

@@ -406,5 +406,10 @@
         not_found_title: (en: "Page not found", ru: "Страница не найдена"),
         not_found_body: (en: "This page doesn't exist.", ru: "Такой страницы нет."),
         to_resume: (en: "Go to the résumé", ru: "Перейти к резюме"),
+        plaza: (en: "Skate plaza", ru: "Скейт-площадка"),
+        plaza_label: (en: "Skate plaza: an interactive version of this résumé", ru: "Скейт-площадка: интерактивная версия резюме"),
+        classic_view: (en: "Classic view", ru: "Классическая версия"),
+        loading: (en: "Loading the plaza…", ru: "Загружаем площадку…"),
+        needs_js: (en: "The skate plaza needs JavaScript and WebGL.", ru: "Для скейт-площадки нужны JavaScript и WebGL."),
     ),
 )

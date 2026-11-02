@@ -26,6 +26,8 @@ pub struct ClassicPage<'a> {
     lang: Lang,
     /// CV path, or `None` when the file isn't in `static/` yet.
     cv: Option<&'a str>,
+    /// Whether the plaza was built, so the header can link to it.
+    plaza: bool,
     style: &'static str,
     json_ld: String,
 }
@@ -33,11 +35,12 @@ pub struct ClassicPage<'a> {
 // Askama passes method arguments by reference, but not consistently, so the
 // templates never pass a `Lang`: each page gets helpers for what it needs.
 impl<'a> ClassicPage<'a> {
-    pub fn new(p: &'a Portfolio, lang: Lang, cv: Option<&'a str>) -> Self {
+    pub fn new(p: &'a Portfolio, lang: Lang, cv: Option<&'a str>, plaza: bool) -> Self {
         Self {
             p,
             lang,
             cv,
+            plaza,
             style: STYLE,
             json_ld: person_json_ld(p, lang),
         }
@@ -45,6 +48,11 @@ impl<'a> ClassicPage<'a> {
 
     fn t(&self, text: &'a Text) -> &'a str {
         text.get(self.lang)
+    }
+
+    /// The visitor asked for the plaza, so skip its device check.
+    fn plaza_href(&self) -> String {
+        format!("/?play&lang={}", self.lang.code())
     }
 
     fn url(&self, lang: Lang) -> String {
@@ -189,6 +197,45 @@ impl<'a> NotFoundPage<'a> {
     }
 }
 
+/// The plaza's page at `/`: device check, language, loader and the
+/// always-visible link to the classic page.
+#[derive(Template)]
+#[template(path = "plaza.html")]
+pub struct PlazaShell<'a> {
+    p: &'a Portfolio,
+    /// Renderers with a build in `dist/plaza/<renderer>/`.
+    builds: Vec<&'static str>,
+    /// Cache-busting query for the build files, whose names don't change.
+    version: String,
+}
+
+impl<'a> PlazaShell<'a> {
+    pub fn new(p: &'a Portfolio, builds: Vec<&'static str>, version: String) -> Self {
+        Self { p, builds, version }
+    }
+
+    fn en(&self, text: &'a Text) -> &'a str {
+        text.get(Lang::En)
+    }
+
+    fn ru(&self, text: &'a Text) -> &'a str {
+        text.get(Lang::Ru)
+    }
+
+    fn classic_path_en(&self) -> &'static str {
+        classic_path(Lang::En)
+    }
+
+    fn classic_path_ru(&self) -> &'static str {
+        classic_path(Lang::Ru)
+    }
+
+    fn builds_json(&self) -> String {
+        serde_json::to_string(&self.builds).expect("strings serialize")
+    }
+}
+
+/// Stands in for the plaza at `/` when it hasn't been built.
 #[derive(Template)]
 #[template(path = "redirect.html")]
 pub struct RedirectPage<'a> {
@@ -209,7 +256,7 @@ impl<'a> RedirectPage<'a> {
     }
 }
 
-pub fn sitemap(site_url: &str) -> String {
+pub fn sitemap(site_url: &str, plaza: bool) -> String {
     let alternates: String = Lang::ALL
         .iter()
         .map(|l| {
@@ -220,7 +267,7 @@ pub fn sitemap(site_url: &str) -> String {
             )
         })
         .collect();
-    let urls: String = Lang::ALL
+    let mut urls: String = Lang::ALL
         .iter()
         .map(|l| {
             format!(
@@ -229,6 +276,12 @@ pub fn sitemap(site_url: &str) -> String {
             )
         })
         .collect();
+    if plaza {
+        urls.insert_str(
+            0,
+            &format!("\n  <url>\n    <loc>{site_url}/</loc>\n  </url>"),
+        );
+    }
     format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
          <urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">{urls}\n</urlset>\n"

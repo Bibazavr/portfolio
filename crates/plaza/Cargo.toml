@@ -1,0 +1,32 @@
+[package]
+name = "plaza"
+description = "The interactive skate plaza, built with Bevy and compiled to WASM."
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+
+[features]
+default = ["webgl2"]
+# Bevy picks one renderer at compile time, so the site ships one build per
+# renderer and the shell page loads the WebGPU build where the browser has it.
+webgl2 = ["bevy/webgl2"]
+webgpu = ["bevy/webgpu"]
+
+[dependencies]
+avian3d = { version = "0.8.0", default-features = false, features = ["3d", "parry-f32"] }
+bevy = { version = "0.20.1", default-features = false, features = [
+    "std",
+    "web",
+    "async_executor",
+    "bevy_asset",
+    "bevy_log",
+    "bevy_winit",
+    "bevy_window",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_light",
+    "bevy_camera",
+    "bevy_mesh",
+    "bevy_color",
+] }

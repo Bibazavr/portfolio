@@ -1,0 +1,8 @@
+[build]
+target = "index.html"
+dist = "../../dist/plaza/webgl2"
+# The shell page adds its own cache-busting query, so names stay stable.
+filehash = false
+
+[serve]
+port = 8081

@@ -366,6 +366,14 @@ pub struct Ui {
     pub not_found_title: Text,
     pub not_found_body: Text,
     pub to_resume: Text,
+    /// Link from the classic page to the plaza.
+    pub plaza: Text,
+    /// Accessible name of the plaza's canvas.
+    pub plaza_label: Text,
+    /// The plaza's always-visible link to the classic page.
+    pub classic_view: Text,
+    pub loading: Text,
+    pub needs_js: Text,
 }
 
 #[cfg(test)]

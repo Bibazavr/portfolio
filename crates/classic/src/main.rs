@@ -1,20 +1,26 @@
 //! Builds the static part of the site into `dist/`, or into the directory given
 //! as the first argument: the classic résumé in every language, the 404 page,
-//! the sitemap and robots.txt, plus everything in `static/`.
+//! the sitemap and robots.txt, plus everything in `static/`. Run it after
+//! trunk has built the plaza into `dist/plaza/`, so `/` can load the plaza.
 
 mod pages;
 
 use std::{
     env,
     error::Error,
-    fs, io,
+    fs,
+    hash::{DefaultHasher, Hasher},
+    io,
     path::{Path, PathBuf},
 };
 
 use askama::Template;
 use content::Lang;
 
-use pages::{ClassicPage, NotFoundPage, RedirectPage};
+use pages::{ClassicPage, NotFoundPage, PlazaShell, RedirectPage};
+
+/// One plaza build per renderer, in `dist/plaza/<renderer>/`.
+const RENDERERS: [&str; 2] = ["webgl2", "webgpu"];
 
 fn main() -> Result<(), Box<dyn Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -42,23 +48,29 @@ fn main() -> Result<(), Box<dyn Error>> {
         );
     }
 
+    let builds = plaza_builds(&out)?;
+    let plaza = !builds.is_empty();
+
     for lang in Lang::ALL {
         let dir = out.join(pages::classic_path(lang).trim_start_matches('/'));
         write(
             &dir.join("index.html"),
-            &ClassicPage::new(&portfolio, lang, cv).render()?,
+            &ClassicPage::new(&portfolio, lang, cv, plaza).render()?,
         )?;
     }
     write(
         &out.join("404.html"),
         &NotFoundPage::new(&portfolio).render()?,
     )?;
-    // Until the plaza exists, `/` forwards to the classic page.
-    write(
-        &out.join("index.html"),
-        &RedirectPage::new(&portfolio).render()?,
-    )?;
-    write(&out.join("sitemap.xml"), &pages::sitemap(site_url))?;
+    let home = if plaza {
+        let version = build_version(&out, &builds)?;
+        PlazaShell::new(&portfolio, builds, version).render()?
+    } else {
+        eprintln!("warning: no plaza build in dist/plaza/, so / forwards to the classic page");
+        RedirectPage::new(&portfolio).render()?
+    };
+    write(&out.join("index.html"), &home)?;
+    write(&out.join("sitemap.xml"), &pages::sitemap(site_url, plaza))?;
     write(
         &out.join("robots.txt"),
         &format!("User-agent: *\nAllow: /\n\nSitemap: {site_url}/sitemap.xml\n"),
@@ -66,6 +78,38 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Built {}", out.display());
     Ok(())
+}
+
+/// Finds the plaza builds and removes what trunk leaves next to them: its
+/// `index.html` is a dev page, and the shell page loads the builds instead.
+fn plaza_builds(out: &Path) -> io::Result<Vec<&'static str>> {
+    let mut builds = Vec::new();
+    for renderer in RENDERERS {
+        let dir = out.join("plaza").join(renderer);
+        if !dir.join("plaza_bg.wasm").is_file() {
+            continue;
+        }
+        for leftover in ["index.html", ".trunk-lock"] {
+            match fs::remove_file(dir.join(leftover)) {
+                Err(e) if e.kind() != io::ErrorKind::NotFound => return Err(e),
+                _ => {}
+            }
+        }
+        builds.push(renderer);
+    }
+    Ok(builds)
+}
+
+/// A hash of the build files. GitHub Pages caches for 10 minutes and trunk's
+/// names don't change, so the shell adds this to the URLs it loads.
+fn build_version(out: &Path, builds: &[&str]) -> io::Result<String> {
+    let mut hasher = DefaultHasher::new();
+    for renderer in builds {
+        for file in ["plaza.js", "plaza_bg.wasm"] {
+            hasher.write(&fs::read(out.join("plaza").join(renderer).join(file))?);
+        }
+    }
+    Ok(format!("{:016x}", hasher.finish()))
 }
 
 fn write(path: &Path, contents: &str) -> io::Result<()> {
