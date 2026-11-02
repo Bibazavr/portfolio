@@ -319,6 +319,7 @@ h4 {
 
 .highlights {
 	counter-reset: highlight;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
 }
 
 .highlights li {

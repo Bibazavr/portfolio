@@ -54,10 +54,17 @@
             ),
         ),
         (
-            title: (en: "A client app in 1 month", ru: "Приложение для клиента за 1 месяц"),
+            title: (en: "A client app in 1 month, before AI", ru: "Приложение для клиента за 1 месяц — ещё до ИИ"),
             body: (
-                en: "Built project templates that let the team ship a client app in 1 month.",
-                ru: "Сделал шаблоны проектов, благодаря которым команда выпустила приложение для заказчика за 1 месяц.",
+                en: "Before AI coding tools, built project templates that let the team ship a client app in 1 month.",
+                ru: "Ещё до ИИ-инструментов сделал шаблоны проектов, благодаря которым команда выпустила приложение для заказчика за 1 месяц.",
+            ),
+        ),
+        (
+            title: (en: "An app in 2 weeks, with AI", ru: "Приложение за 2 недели — с ИИ"),
+            body: (
+                en: "With AI-assisted development, built an app in 2 weeks.",
+                ru: "С помощью ИИ собрал приложение за 2 недели.",
             ),
         ),
     ],
