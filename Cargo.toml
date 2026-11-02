@@ -1,0 +1,14 @@
+[workspace]
+resolver = "3"
+members = ["crates/content", "crates/classic"]
+
+[workspace.package]
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+content = { path = "crates/content" }
+askama = "0.16.1"
+ron = "0.12.3"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"

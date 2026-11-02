@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="{{ lang.code() }}">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{ self.t(p.identity.name) }} — {{ self.t(p.identity.title) }}</title>
+	<meta name="description" content="{{ self.t(p.identity.summary) }}">
+	<meta name="author" content="{{ self.t(p.identity.name) }}">
+	<meta name="color-scheme" content="light dark">
+	<meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)">
+	<meta name="theme-color" content="#0e1110" media="(prefers-color-scheme: dark)">
+	<link rel="canonical" href="{{ self.canonical() }}">
+	{%- for (code, href) in self.alternates() %}
+	<link rel="alternate" hreflang="{{ code }}" href="{{ href }}">
+	{%- endfor %}
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+	<meta property="og:type" content="profile">
+	<meta property="og:title" content="{{ self.t(p.identity.name) }} — {{ self.t(p.identity.title) }}">
+	<meta property="og:description" content="{{ self.t(p.identity.summary) }}">
+	<meta property="og:url" content="{{ self.canonical() }}">
+	<meta property="og:site_name" content="{{ p.identity.handle }}">
+	<meta property="og:locale" content="{{ self.og_locale() }}">
+	<meta property="og:locale:alternate" content="{{ self.og_locale_alternate() }}">
+	<meta property="profile:username" content="{{ p.identity.handle }}">
+	<meta name="twitter:card" content="summary">
+
+	<style>{{ style|safe }}</style>
+	<script type="application/ld+json">{{ json_ld|safe }}</script>
+</head>
+<body>
+	<a class="skip" href="#main">{{ self.t(p.ui.skip_to_content) }}</a>
+
+	<header class="site-header">
+		<div class="wrap">
+			<a class="brand" href="{{ self.home() }}">
+				<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#7851A9"/><g fill="#fff" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"><path d="M31.9 26 L33.5 18.3 L37.7 25 Z"/><path d="M39.7 25.3 L45.5 19.9 L45 27.8 Z"/><path d="M46.5 29.1 L52.6 29 L49.4 34.2 Z"/></g><rect x="15" y="13" width="9" height="39" rx="4.5" fill="#fff"/><circle cx="37" cy="38" r="10" fill="none" stroke="#fff" stroke-width="8"/></svg>
+				{{ p.identity.handle }}
+			</a>
+			<a class="crumb" href="{{ self.switch_path() }}" hreflang="{{ lang.other().code() }}" lang="{{ lang.other().code() }}">{{ self.switch_label() }}</a>
+		</div>
+	</header>
+
+	<main id="main">
+		<section class="hero">
+			<div class="wrap">
+				<p class="eyebrow">{{ self.t(p.identity.location) }}</p>
+				<h1>{{ self.t(p.identity.name) }}</h1>
+				<p class="tagline">{{ self.t(p.identity.title) }}</p>
+				<p class="summary">{{ self.t(p.identity.summary) }}</p>
+				<div class="actions">
+					<a class="btn primary" href="mailto:{{ p.identity.email }}">{{ self.t(p.ui.email_me) }}</a>
+					{%- if let Some(cv) = cv %}
+					<a class="btn secondary" href="/{{ cv }}" download>{{ self.t(p.ui.download_cv) }}</a>
+					{%- endif %}
+				</div>
+				<ul class="links">
+					{%- for link in p.identity.links %}
+					<li><a href="{{ link.url }}">{{ self.t(link.label) }}</a></li>
+					{%- endfor %}
+				</ul>
+			</div>
+		</section>
+
+		<section class="section" aria-labelledby="highlights">
+			<div class="wrap">
+				<h2 id="highlights">{{ self.t(p.ui.highlights) }}</h2>
+				<ol class="grid highlights">
+					{%- for highlight in p.highlights %}
+					<li class="card">
+						<h3>{{ self.t(highlight.title) }}</h3>
+						<p>{{ self.t(highlight.body) }}</p>
+					</li>
+					{%- endfor %}
+				</ol>
+			</div>
+		</section>
+
+		<section class="section" aria-labelledby="experience">
+			<div class="wrap">
+				<h2 id="experience">{{ self.t(p.ui.experience) }}</h2>
+				<ol class="jobs">
+					{%- for job in p.experience %}
+					<li class="card job">
+						<div class="job-head">
+							<h3>{{ self.t(job.role) }}<span class="company">{{ self.t(job.company) }}</span></h3>
+							<p class="meta">{{ self.job_period(job) }} · {{ self.t(job.location) }}</p>
+						</div>
+						{%- if !job.points.is_empty() %}
+						<ul class="points">
+							{%- for point in job.points %}
+							<li>{{ self.t(point) }}</li>
+							{%- endfor %}
+						</ul>
+						{%- endif %}
+						{%- if !job.projects.is_empty() %}
+						<ul class="projects">
+							{%- for project in job.projects %}
+							<li class="project">
+								<div class="project-head">
+									<h4>{{ self.t(project.name) }}</h4>
+									{%- for badge in self.badges(project) %}
+									<span class="badge">{{ badge }}</span>
+									{%- endfor %}
+									{%- if let Some(period) = self.project_period(job, project) %}
+									<span class="meta">{{ period }}</span>
+									{%- endif %}
+								</div>
+								{%- if let Some(summary) = project.summary %}
+								<p>{{ self.t(summary) }}</p>
+								{%- endif %}
+								{%- if !project.points.is_empty() %}
+								<ul class="points">
+									{%- for point in project.points %}
+									<li>{{ self.t(point) }}</li>
+									{%- endfor %}
+								</ul>
+								{%- endif %}
+							</li>
+							{%- endfor %}
+						</ul>
+						{%- endif %}
+					</li>
+					{%- endfor %}
+				</ol>
+			</div>
+		</section>
+
+		<section class="section" aria-labelledby="skills">
+			<div class="wrap">
+				<h2 id="skills">{{ self.t(p.ui.skills) }}</h2>
+				<div class="grid skills">
+					{%- for group in p.skills %}
+					<section class="card">
+						<h3>{{ self.t(group.name) }}</h3>
+						<ul class="points">
+							{%- for item in group.items %}
+							<li>{{ self.t(item) }}</li>
+							{%- endfor %}
+						</ul>
+					</section>
+					{%- endfor %}
+				</div>
+			</div>
+		</section>
+
+		<section class="section" aria-labelledby="open-source">
+			<div class="wrap">
+				<h2 id="open-source">{{ self.t(p.ui.open_source) }}</h2>
+				<ul class="grid repos">
+					{%- for repo in p.open_source %}
+					<li class="card repo">
+						<h3><a href="{{ repo.url }}">{{ repo.name }}</a></h3>
+						<p>{{ self.t(repo.description) }}</p>
+						<p class="repo-foot">
+							<span class="badge">{{ repo.language }}</span>
+							{%- if let Some(demo) = repo.demo %}
+							<a href="{{ demo }}">{{ self.t(p.ui.demo) }}</a>
+							{%- endif %}
+						</p>
+					</li>
+					{%- endfor %}
+				</ul>
+			</div>
+		</section>
+
+		<section class="section" aria-labelledby="apps">
+			<div class="wrap">
+				<h2 id="apps">{{ self.t(p.ui.apps) }}</h2>
+				{%- for app in p.apps %}
+				<article class="card app-card">
+					<img class="icon" src="/{{ app.icon }}" width="112" height="112" alt="" loading="lazy">
+					<div>
+						<h3>{{ app.name }}</h3>
+						<p class="lede">{{ self.t(app.description) }}</p>
+						<ul class="features">
+							{%- for feature in app.features %}
+							<li>{{ self.t(feature) }}</li>
+							{%- endfor %}
+						</ul>
+						<div class="actions">
+							<a class="btn primary" href="{{ app.web }}">{{ self.t(p.ui.open_web) }}</a>
+							<a class="btn secondary" href="{{ app.studio }}">{{ self.t(p.ui.studio_page) }}</a>
+						</div>
+						{%- if let Some(status) = app.status %}
+						<p class="meta status">{{ self.t(status) }}</p>
+						{%- endif %}
+					</div>
+				</article>
+				{%- endfor %}
+			</div>
+		</section>
+
+		<section class="section" aria-labelledby="education">
+			<div class="wrap">
+				<h2 id="education">{{ self.t(p.ui.education) }}</h2>
+				{%- for school in p.education %}
+				<div class="card">
+					<h3>{{ self.t(school.school) }}</h3>
+					<p class="meta">{{ self.t(school.degree) }} · {{ self.education_period(school) }}</p>
+				</div>
+				{%- endfor %}
+			</div>
+		</section>
+
+		<section class="section" aria-labelledby="contact">
+			<div class="wrap">
+				<h2 id="contact">{{ self.t(p.ui.contact) }}</h2>
+				<div class="card contact">
+					<p class="email"><a href="mailto:{{ p.identity.email }}">{{ p.identity.email }}</a></p>
+					<p class="meta">{{ self.t(p.identity.location) }}</p>
+					{%- if let Some(cv) = cv %}
+					<div class="actions">
+						<a class="btn secondary" href="/{{ cv }}" download>{{ self.t(p.ui.download_cv) }}</a>
+					</div>
+					{%- endif %}
+					<ul class="links">
+						{%- for link in p.identity.links %}
+						<li><a href="{{ link.url }}">{{ self.t(link.label) }}</a></li>
+						{%- endfor %}
+					</ul>
+					<h3>{{ self.t(p.ui.fun_facts) }}</h3>
+					<dl class="facts">
+						{%- for fact in p.identity.fun_facts %}
+						<dt>{{ self.t(fact.label) }}</dt>
+						<dd>{{ self.t(fact.value) }}</dd>
+						{%- endfor %}
+					</dl>
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<footer class="site-footer">
+		<div class="wrap">
+			<p><strong>{{ self.t(p.identity.name) }}</strong> · {{ p.identity.handle }}</p>
+			<p>{{ self.t(p.ui.footer_note) }}</p>
+		</div>
+	</footer>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[package]
+name = "content"
+description = "Portfolio content model, shared by the classic page and the plaza."
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+ron.workspace = true
+serde.workspace = true

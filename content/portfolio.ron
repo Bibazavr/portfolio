@@ -1,0 +1,410 @@
+#![enable(implicit_some)]
+// Single source of truth for both views: the plaza (/) and the classic page (/classic).
+//
+// Text is either a plain string, shown as-is in every language, or
+// (en: "...", ru: "...") with one string per language.
+// Dates are "YYYY-MM", or "YYYY" when the month isn't known.
+(
+    site: (
+        url: "https://me.bibazavr.fyi",
+        cv: "cv/kirill-lebedev-cv.pdf",
+    ),
+
+    identity: (
+        name: (en: "Kirill Lebedev", ru: "Кирилл Лебедев"),
+        handle: "Bibazavr",
+        title: (en: "Senior React Native Developer", ru: "Senior React Native-разработчик"),
+        location: (en: "Almaty, Kazakhstan", ru: "Алматы, Казахстан"),
+        summary: (
+            en: "React Native developer with more than 5 years of experience building and maintaining iOS, Android and web apps. Writes clean, strongly typed code. Strong at problem-solving, code review, mentoring and legacy code.",
+            ru: "React Native-разработчик с опытом более 5 лет: создаю и поддерживаю приложения для iOS, Android и веба. Пишу чистый, строго типизированный код. Сильные стороны — решение сложных задач, код-ревью, менторство и работа с легаси-кодом.",
+        ),
+        email: "lirik.hariev@gmail.com",
+        links: [
+            (kind: LinkedIn, label: "LinkedIn", url: "https://www.linkedin.com/in/bibazavr"),
+            (kind: GitHub, label: "GitHub", url: "https://github.com/Bibazavr"),
+            (kind: LeetCode, label: "LeetCode", url: "https://leetcode.com/u/Bibazavr/"),
+            (kind: Telegram, label: (en: "Bibacode on Telegram", ru: "Bibacode в Telegram"), url: "https://t.me/bibacode"),
+            (kind: Studio, label: "bibazavr.fyi", url: "https://bibazavr.fyi"),
+        ],
+        fun_facts: [
+            (label: (en: "Favourite language", ru: "Любимый язык"), value: "Rust"),
+            (label: (en: "Hobby", ru: "Хобби"), value: (en: "Skateboarding", ru: "Скейтбординг")),
+        ],
+    ),
+
+    highlights: [
+        (
+            title: (en: "Own CI build system", ru: "Своя система сборки"),
+            body: (
+                en: "When Bitrise stopped working in Russia, wrote an in-house build system to replace it. It is now used across all projects.",
+                ru: "Когда Bitrise перестал работать в России, написал собственную систему сборки ему на замену. Теперь она используется во всех проектах.",
+            ),
+        ),
+        (
+            title: (en: "Major React Native upgrades and TypeScript", ru: "Крупные обновления React Native и TypeScript"),
+            body: (
+                en: "Upgraded a large store app from React Native 0.60 to 0.65 to 0.72 and moved it to TypeScript.",
+                ru: "Обновил большое приложение магазина с React Native 0.60 до 0.65 и 0.72 и перевёл его на TypeScript.",
+            ),
+        ),
+        (
+            title: (en: "A client app in 1 month", ru: "Приложение для клиента за 1 месяц"),
+            body: (
+                en: "Built project templates that let the team ship a client app in 1 month.",
+                ru: "Сделал шаблоны проектов, благодаря которым команда выпустила приложение для заказчика за 1 месяц.",
+            ),
+        ),
+    ],
+
+    experience: [
+        (
+            company: (en: "Individual Entrepreneur Lebedev", ru: "ИП Лебедев"),
+            role: (en: "Consulting Software Engineer", ru: "Разработчик-консультант"),
+            start: "2025-10",
+            location: (en: "Almaty", ru: "Алматы"),
+            projects: [
+                (
+                    name: "Bibalove",
+                    kind: Own,
+                    start: "2026",
+                    end: "2026",
+                    summary: (
+                        en: "A couples app for iOS, Android and web from one Expo codebase.",
+                        ru: "Приложение для пар на iOS, Android и в вебе из одной кодовой базы Expo.",
+                    ),
+                    points: [
+                        (en: "Firebase backend with security rules covered by emulator tests; Google and Apple sign-in.", ru: "Бэкенд на Firebase: правила безопасности покрыты тестами на эмуляторе; вход через Google и Apple."),
+                        (en: "Lingui i18n, push notifications, device calendar sync.", ru: "Локализация на Lingui, push-уведомления, синхронизация с календарём устройства."),
+                        (en: "Maestro E2E suites; OTA updates via EAS.", ru: "E2E-тесты на Maestro; OTA-обновления через EAS."),
+                    ],
+                ),
+                (
+                    name: (en: "Social-dining platform", ru: "Платформа совместных ужинов"),
+                    kind: Client,
+                    nda: true,
+                    start: "2026",
+                    end: "2026",
+                    points: [
+                        (en: "Rewrote a no-code website into one Expo codebase that ships the iOS app, the Android app and the website.", ru: "Переписал сайт с no-code-платформы на единую кодовую базу Expo, из которой собираются приложения для iOS и Android и сам сайт."),
+                        (en: "Server-rendered web with API routes on EAS Hosting.", ru: "Серверный рендеринг веба и API-роуты на EAS Hosting."),
+                        (en: "Stripe checkout on web and native, including Apple Pay and Google Pay; onboarding quiz funnels; GA4 analytics.", ru: "Оплата через Stripe в вебе и в нативных приложениях, включая Apple Pay и Google Pay; онбординг-воронки с квизами; аналитика GA4."),
+                    ],
+                ),
+                (
+                    name: (en: "Messenger app", ru: "Мессенджер"),
+                    kind: Client,
+                    nda: true,
+                    start: "2025",
+                    end: "2026",
+                    summary: (
+                        en: "A production chat app on bare React Native (no Expo), with more than 2,000 commits on the team.",
+                        ru: "Мессенджер в продакшене на bare React Native (без Expo); у команды более 2000 коммитов.",
+                    ),
+                    points: [
+                        (en: "CI/CD with Fastlane and GitHub Actions: version bump, tagging, iOS/Android builds and releases.", ru: "CI/CD на Fastlane и GitHub Actions: повышение версии, теги, сборки и релизы для iOS и Android."),
+                        (en: "Soft and hard app updates; SMS-abuse protection with reCAPTCHA Enterprise; stabilised the auth flow.", ru: "Мягкие и принудительные обновления приложения; защита от SMS-абуза с reCAPTCHA Enterprise; стабилизировал авторизацию."),
+                        (en: "Chat list scroll optimisation with FlashList; offline storage with SQLite and MMKV.", ru: "Оптимизация скролла списка чатов на FlashList; офлайн-хранилище на SQLite и MMKV."),
+                        (en: "Push notifications, Crashlytics, Remote Config, Sentry; media sharing, files and camera roll.", ru: "Push-уведомления, Crashlytics, Remote Config, Sentry; отправка медиа, файлов и фото из галереи."),
+                        (en: "Reusable skeleton animations; maintaining the codebase.", ru: "Переиспользуемые skeleton-анимации; поддержка кодовой базы."),
+                    ],
+                ),
+                (
+                    name: (en: "Call center app", ru: "Приложение для колл-центра"),
+                    kind: Client,
+                    points: [
+                        (en: "Rewrote it from React Native 0.69 to the newest Expo SDK.", ru: "Переписал приложение с React Native 0.69 на актуальный Expo SDK."),
+                        (en: "Set up CI/CD.", ru: "Настроил CI/CD."),
+                    ],
+                ),
+            ],
+        ),
+        (
+            company: (en: "IT-company LAD", ru: "IT-компания LAD"),
+            role: (en: "Senior Mobile Developer", ru: "Senior мобильный разработчик"),
+            start: "2021-04",
+            end: "2025-10",
+            location: (en: "Nizhny Novgorod", ru: "Нижний Новгород"),
+            projects: [
+                (
+                    name: (en: "Infrastructure", ru: "Инфраструктура"),
+                    start: "2021-04",
+                    points: [
+                        (en: "CI/CD and pre-commit hooks.", ru: "CI/CD и pre-commit хуки."),
+                        (en: "Unified eslint, prettier and semantic-release configs.", ru: "Единые конфиги eslint, prettier и semantic-release."),
+                        (en: "npm and GitLab package registries.", ru: "Реестры пакетов в npm и GitLab."),
+                        (en: "Open-sourced internal libraries.", ru: "Вывел внутренние библиотеки в open source."),
+                    ],
+                ),
+                (
+                    name: (en: "Discount card app", ru: "Приложение для хранения скидочных карт"),
+                    start: "2021-04",
+                    end: "2022-02",
+                    points: [
+                        (en: "Optimised app launch speed.", ru: "Ускорил запуск приложения."),
+                        (en: "Wrote an in-house project build system after Bitrise stopped working in Russia; it is now used across all projects.", ru: "Когда Bitrise перестал работать в России, написал собственную систему сборки проектов; теперь она используется во всех проектах."),
+                    ],
+                ),
+                (
+                    name: (en: "Clothing and shoe store app", ru: "Интернет-магазин одежды и обуви"),
+                    start: "2022-02",
+                    end: "2023-10",
+                    points: [
+                        (en: "Upgraded React Native 0.60 → 0.65 → 0.72 and moved the project to TypeScript.", ru: "Обновил React Native 0.60 → 0.65 → 0.72 и перевёл проект на TypeScript."),
+                        (en: "Optimised the cash register and order issuing.", ru: "Оптимизировал работу кассы и выдачу заказов."),
+                        (en: "Atol and bluetooth scanner integrations.", ru: "Интеграции с АТОЛ и bluetooth-сканерами."),
+                    ],
+                ),
+                (
+                    name: (en: "Component libraries", ru: "Библиотеки компонентов"),
+                    start: "2022-01",
+                    points: [
+                        (en: "Mobydick design system, built together with designers.", ru: "Дизайн-система Mobydick, вместе с дизайнерами."),
+                        (en: "A library for complex animated charts.", ru: "Библиотека для сложных анимированных графиков."),
+                        (en: "A keyboard library.", ru: "Библиотека для работы с клавиатурой."),
+                    ],
+                ),
+                (
+                    name: (en: "HR app", ru: "HR-приложение"),
+                    start: "2023-10",
+                    end: "2024-04",
+                    points: [
+                        (en: "Unified refresh/access tokens across all projects.", ru: "Унифицировал refresh- и access-токены во всех проектах."),
+                        (en: "1C integration.", ru: "Интеграция с 1С."),
+                        (en: "Chats with consultants.", ru: "Чаты с консультантами."),
+                        (en: "A flexible role model.", ru: "Гибкая ролевая модель."),
+                    ],
+                ),
+                (
+                    name: (en: "Fitness app", ru: "Фитнес-приложение"),
+                    start: "2023-10",
+                    end: "2024-04",
+                    points: [
+                        (en: "Apple Health and Google Health integration.", ru: "Интеграция с Apple Health и Google Health."),
+                        (en: "Animated charts and progress bars.", ru: "Анимированные графики и прогресс-бары."),
+                        (en: "Video calls.", ru: "Видеозвонки."),
+                    ],
+                ),
+                (
+                    name: (en: "Project templates", ru: "Шаблоны проектов"),
+                    start: "2024-04",
+                    points: [
+                        (en: "Templates for a quick project start that let the team ship a client app in 1 month.", ru: "Шаблоны для быстрого старта проектов, благодаря которым команда выпустила приложение для заказчика за 1 месяц."),
+                    ],
+                ),
+            ],
+        ),
+        (
+            company: "Studio TG",
+            role: (en: "Software Engineer", ru: "Инженер-программист"),
+            start: "2020-10",
+            end: "2021-04",
+            location: (en: "Nizhny Novgorod", ru: "Нижний Новгород"),
+            points: [
+                (en: "Moved projects to TypeScript.", ru: "Перевёл проекты на TypeScript."),
+                (en: "Introduced testing.", ru: "Внедрил тестирование."),
+                (en: "Pre-commit hooks and unified eslint/prettier configs.", ru: "Pre-commit хуки и единые конфиги eslint/prettier."),
+            ],
+        ),
+        (
+            company: "ООО Микролайн",
+            role: (en: "Software Engineer", ru: "Инженер-программист"),
+            start: "2019-09",
+            end: "2020-10",
+            location: (en: "Nizhny Novgorod", ru: "Нижний Новгород"),
+            points: [
+                (en: "Built iOS and Android apps that talk to an alarm system over Bluetooth Low Energy.", ru: "Написал приложения для iOS и Android, которые связываются с сигнализацией по Bluetooth Low Energy."),
+            ],
+        ),
+    ],
+
+    open_source: [
+        (
+            name: "lad-tech/mobydick",
+            url: "https://github.com/lad-tech/mobydick",
+            description: (en: "React Native UI kit focused on usability and accessibility.", ru: "UI-кит для React Native с упором на удобство и доступность."),
+            language: "TypeScript",
+            demo: "https://lad-tech.github.io/mobydick/",
+        ),
+        (
+            name: "lad-tech/eslint-config",
+            url: "https://github.com/lad-tech/eslint-config",
+            description: (en: "Shared ESLint config for one code style across related projects.", ru: "Общий конфиг ESLint для единого стиля кода во всех связанных проектах."),
+            language: "JavaScript",
+        ),
+        (
+            name: "lad-tech/check-deps-age",
+            url: "https://github.com/lad-tech/check-deps-age",
+            description: (en: "A utility that checks how old your dependencies are.", ru: "Утилита для проверки возраста зависимостей."),
+            language: "TypeScript",
+        ),
+        (
+            name: "Bibazavr/leetcode-rust",
+            url: "https://github.com/Bibazavr/leetcode-rust",
+            description: (en: "My LeetCode solutions, written in Rust.", ru: "Мои решения задач LeetCode на Rust."),
+            language: "Rust",
+        ),
+        (
+            name: "Bibazavr/cuboid",
+            url: "https://github.com/Bibazavr/cuboid",
+            description: (en: "A simple survival game built with Bevy.", ru: "Простая игра на выживание на Bevy."),
+            language: "Rust",
+        ),
+    ],
+
+    skills: [
+        (
+            name: (en: "Languages", ru: "Языки программирования"),
+            items: ["TypeScript", "JavaScript", "Kotlin", "Swift", "Rust"],
+        ),
+        (
+            name: (en: "Mobile and cross-platform", ru: "Мобильная и кроссплатформенная разработка"),
+            items: [
+                (en: "React Native (new architecture, React 19, React Compiler)", ru: "React Native (новая архитектура, React 19, React Compiler)"),
+                (en: "Expo SDK 57–58 and bare React Native CLI", ru: "Expo SDK 57–58 и bare React Native CLI"),
+                (en: "Expo Router with typed routes", ru: "Expo Router с типизированными роутами"),
+                (en: "Web output from the same codebase: static export and output: \"server\" with /api/* server routes", ru: "Веб из той же кодовой базы: статический экспорт и output: \"server\" с серверными роутами /api/*"),
+                (en: "React Navigation 7 with native bottom tabs", ru: "React Navigation 7 с нативными нижними табами"),
+                (en: "react-native-web, custom Expo config plugins, Nitro modules", ru: "react-native-web, собственные Expo config plugins, Nitro-модули"),
+                (en: "Yarn workspaces monorepo, patch-package", ru: "Монорепозиторий на Yarn workspaces, patch-package"),
+            ],
+        ),
+        (
+            name: (en: "State and data", ru: "Состояние и данные"),
+            items: [
+                "TanStack Query, RTK Query, Redux Toolkit",
+                "zustand, MobX, Legend State",
+                (en: "MMKV, op-sqlite (offline storage)", ru: "MMKV, op-sqlite (офлайн-хранилище)"),
+                (en: "Axios, react-hook-form with zod validation, date-fns", ru: "Axios, react-hook-form с валидацией на zod, date-fns"),
+            ],
+        ),
+        (
+            name: (en: "UI and animation", ru: "UI и анимации"),
+            items: [
+                (en: "Reanimated 4 with worklets, Skia, Lottie", ru: "Reanimated 4 с ворклетами, Skia, Lottie"),
+                (en: "react-native-unistyles v3 (theming), FlashList / Legend List", ru: "react-native-unistyles v3 (темизация), FlashList / Legend List"),
+                (en: "Gesture Handler, keyboard-controller, bottom sheets, carousels, image zoom and cropping, edge-to-edge", ru: "Gesture Handler, keyboard-controller, bottom sheets, карусели, зум и кроп изображений, edge-to-edge"),
+            ],
+        ),
+        (
+            name: (en: "Backend and services", ru: "Бэкенд и сервисы"),
+            items: [
+                (en: "Firebase: Auth with email, Google and Apple sign-in; Firestore with security rules tested on the emulator; Cloud Messaging; Crashlytics; Remote Config; Analytics", ru: "Firebase: Auth со входом по email, через Google и Apple; Firestore с правилами безопасности, протестированными на эмуляторе; Cloud Messaging; Crashlytics; Remote Config; Analytics"),
+                (en: "Stripe: Payment Element and Express Checkout on web; PaymentSheet, Apple Pay and Google Pay on native", ru: "Stripe: Payment Element и Express Checkout в вебе; PaymentSheet, Apple Pay и Google Pay в нативных приложениях"),
+                (en: "AppsFlyer and Facebook SDK attribution, reCAPTCHA Enterprise", ru: "Атрибуция через AppsFlyer и Facebook SDK, reCAPTCHA Enterprise"),
+                (en: "Push notifications, device calendar integration", ru: "Push-уведомления, интеграция с календарём устройства"),
+                "REST, GraphQL, Socket.io",
+            ],
+        ),
+        (
+            name: (en: "i18n", ru: "Локализация"),
+            items: ["Lingui, i18next"],
+        ),
+        (
+            name: (en: "Testing and quality", ru: "Тестирование и качество"),
+            items: [
+                "Jest, react-native-testing-library",
+                (en: "Maestro E2E on iOS, Android and web, including large-text accessibility runs; Detox", ru: "E2E на Maestro для iOS, Android и веба, включая прогоны с крупным шрифтом для проверки доступности; Detox"),
+                "Biome, ESLint/Prettier, Lefthook, commitlint",
+            ],
+        ),
+        (
+            name: (en: "Delivery and DevOps", ru: "Доставка и DevOps"),
+            items: [
+                (en: "EAS Build, Submit, Update and Hosting", ru: "EAS Build, Submit, Update и Hosting"),
+                (en: "OTA update channels with fingerprint-based runtime versions", ru: "Каналы OTA-обновлений с runtime-версиями на основе fingerprint"),
+                (en: "Fastlane; automated version bump, tag and release workflows in GitHub Actions", ru: "Fastlane; автоматические workflow в GitHub Actions для повышения версии, тегов и релизов"),
+                (en: "Separate dev and prod environments (own app IDs and Firebase projects)", ru: "Раздельные dev- и prod-окружения (свои app ID и проекты Firebase)"),
+                (en: "App Store and Google Play release, Sentry, bun", ru: "Релизы в App Store и Google Play, Sentry, bun"),
+            ],
+        ),
+        (
+            name: (en: "Architecture", ru: "Архитектура"),
+            items: [
+                "Feature-Sliced Design",
+                (en: "Design systems and UI kits", ru: "Дизайн-системы и UI-киты"),
+            ],
+        ),
+        (
+            name: (en: "Spoken languages", ru: "Иностранные языки"),
+            items: [(en: "English B2", ru: "Английский B2")],
+        ),
+    ],
+
+    apps: [
+        (
+            name: "Bibalove",
+            icon: "img/bibalove-icon.svg",
+            tagline: (en: "A private space for couples.", ru: "Личное пространство для пар."),
+            description: (
+                en: "A private space for two partners to send compliments, write letters that open on a chosen day, plan dates, and keep track of the days that matter.",
+                ru: "Личное пространство для двоих: комплименты, письма, которые откроются в выбранный день, идеи для свиданий и важные даты.",
+            ),
+            features: [
+                (en: "Compliments", ru: "Комплименты"),
+                (en: "Sealed letters", ru: "Запечатанные письма"),
+                (en: "Date ideas", ru: "Идеи для свиданий"),
+                (en: "Shared calendar", ru: "Общий календарь"),
+                (en: "Streaks", ru: "Стрики"),
+            ],
+            web: "https://bibalove.expo.app",
+            studio: "https://bibazavr.fyi",
+            status: (en: "App Store and Google Play: coming soon", ru: "App Store и Google Play: скоро"),
+        ),
+    ],
+
+    education: [
+        (
+            school: (
+                en: "Nizhny Novgorod State University of Architecture and Civil Engineering (NNGASU)",
+                ru: "Нижегородский государственный архитектурно-строительный университет (ННГАСУ)",
+            ),
+            degree: (en: "Bachelor's degree, Civil Engineering", ru: "Бакалавр, строительство"),
+            start: "2015-09",
+            end: "2019-07",
+        ),
+    ],
+
+    ui: (
+        language_name: (en: "English", ru: "Русский"),
+        skip_to_content: (en: "Skip to content", ru: "Перейти к содержанию"),
+        highlights: (en: "Highlights", ru: "Главное"),
+        experience: (en: "Experience", ru: "Опыт работы"),
+        open_source: "Open source",
+        skills: (en: "Skills", ru: "Навыки"),
+        apps: (en: "Apps", ru: "Приложения"),
+        education: (en: "Education", ru: "Образование"),
+        contact: (en: "Contact", ru: "Контакты"),
+        fun_facts: (en: "Off the clock", ru: "В свободное время"),
+        present: (en: "present", ru: "сейчас"),
+        months: [
+            (en: "Jan", ru: "янв."),
+            (en: "Feb", ru: "февр."),
+            (en: "Mar", ru: "март"),
+            (en: "Apr", ru: "апр."),
+            (en: "May", ru: "май"),
+            (en: "Jun", ru: "июнь"),
+            (en: "Jul", ru: "июль"),
+            (en: "Aug", ru: "авг."),
+            (en: "Sep", ru: "сент."),
+            (en: "Oct", ru: "окт."),
+            (en: "Nov", ru: "нояб."),
+            (en: "Dec", ru: "дек."),
+        ],
+        own_product: (en: "Own product", ru: "Свой продукт"),
+        client: (en: "Client", ru: "Клиент"),
+        nda: (en: "Under NDA", ru: "Под NDA"),
+        email_me: (en: "Email me", ru: "Написать на почту"),
+        download_cv: (en: "Download CV (PDF)", ru: "Скачать резюме (PDF)"),
+        demo: (en: "Demo", ru: "Демо"),
+        open_web: (en: "Open the web version", ru: "Открыть веб-версию"),
+        studio_page: (en: "Studio page", ru: "Страница студии"),
+        footer_note: (
+            en: "This page is generated from a single RON file by a small Rust program.",
+            ru: "Эта страница собрана из одного RON-файла небольшой программой на Rust.",
+        ),
+        not_found_title: (en: "Page not found", ru: "Страница не найдена"),
+        not_found_body: (en: "This page doesn't exist.", ru: "Такой страницы нет."),
+        to_resume: (en: "Go to the résumé", ru: "Перейти к резюме"),
+    ),
+)

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{ self.en(p.ui.not_found_title) }} — {{ p.identity.handle }}</title>
+	<meta name="color-scheme" content="light dark">
+	<meta name="robots" content="noindex">
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+	<style>{{ style|safe }}</style>
+</head>
+<body>
+	<main class="hero">
+		<div class="wrap">
+			<p class="eyebrow">404</p>
+			{%- for block in self.blocks() %}
+			<div class="not-found" lang="{{ block.lang }}">
+				<h1>{{ block.title }}</h1>
+				<p class="tagline">{{ block.body }} <a href="{{ block.path }}">{{ block.back }}</a></p>
+			</div>
+			{%- endfor %}
+		</div>
+	</main>
+</body>
+</html>
