@@ -4,47 +4,71 @@
 //! to say than the plaza shows, floats a card with the details over the thing
 //! it is about.
 //!
-//! The plaza is 60 m square with the skater starting near the south edge,
-//! facing north (−Z). The career line runs west to east, oldest to newest,
-//! along the north edge. Ramps, rails, steps and the start box are Kenney
-//! models; the rest is primitives. Words on the ground read from the south.
+//! The plaza is 60 m across and 70 m deep, with the skater starting near the
+//! south edge, facing north (−Z). The career line runs round the pump track
+//! at the north end (see `pump_track`). Rails and steps are Kenney models;
+//! the rest is primitives. Words on the ground read from the south.
 
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use avian3d::prelude::*;
-use bevy::{light::NotShadowCaster, prelude::*, transform::TransformSystems};
+use bevy::{
+    asset::RenderAssetUsages, light::NotShadowCaster, mesh::PrimitiveTopology, prelude::*,
+    transform::TransformSystems,
+};
 use content::{LinkKind, Spot, Text};
 
 use crate::{
     Layer,
     assets::{self, Models},
     bridge,
+    camera::Frame,
     loading::Phase,
     palette,
+    pump_track::{self, PumpTrack, Surface},
     signs::{self, Letters, LinkPad, PadLook, Words},
     skater::Skater,
-    text_mesh::Style,
+    skill_list,
+    text_mesh::{Font, Style},
 };
 
 /// Where the skater starts, inside the start ledge's zone.
 pub const START: Vec3 = Vec3::new(0.0, 0.0, 20.5);
 
-const CAREER_Z: f32 = -24.0;
-/// Room for the career line along X; the stops spread out to fill it.
-const CAREER_LENGTH: f32 = 46.0;
-const MAX_CAREER_SPACING: f32 = 3.4;
 const BOARD_DEPTH: f32 = 0.12;
+/// A zone marked `Slow` only counts while the skater goes slower than this,
+/// and keeps counting until they go faster than `FAST`.
+const SLOW: f32 = 3.5;
+const FAST: f32 = 5.0;
+/// The skills' patch of ground: its north-west corner, clear of the boards
+/// leaning on the shop and the bench by the edge, and the room it has to
+/// the south, before the contact spot.
+const YARD_WEST: f32 = -27.2;
+const YARD_NORTH: f32 = 6.2;
+const YARD_DEPTH: f32 = 8.4;
+const YARD_MARGIN: f32 = 0.5;
 
 #[derive(Component)]
 struct Zone(Spot);
+
+/// A zone the skater has to slow down in for it to count, so riding past
+/// a row of them doesn't flick through their cards.
+#[derive(Component)]
+struct Slow;
 
 /// The point a zone's details card points at.
 #[derive(Component)]
 struct Card(Vec3);
 
-/// The zone the skater is in, if any.
+/// The zone the skater is in that counts at their speed, if any.
 #[derive(Resource, Default)]
-struct InZone(Option<Entity>);
+pub struct InZone(Option<Entity>);
+
+impl InZone {
+    pub fn get(&self) -> Option<Entity> {
+        self.0
+    }
+}
 
 /// The rails the skater can grind, as the line along each one's top.
 #[derive(Resource, Default)]
@@ -92,6 +116,38 @@ fn flat() -> Quat {
 /// Text in capitals.
 fn upper(text: &Text) -> Text {
     signs::each(|lang| text.get(lang).to_uppercase())
+}
+
+/// The bottom and top corners of a `Builder::funbox` `size` big, each
+/// anticlockwise from above.
+fn funbox_corners(size: Vec3) -> ([Vec3; 4], [Vec3; 4]) {
+    let round = |half: Vec2, y: f32| {
+        [(1.0, 1.0), (1.0, -1.0), (-1.0, -1.0), (-1.0, 1.0)]
+            .map(|(x, z)| Vec3::new(x * half.x, y, z * half.y))
+    };
+    (
+        round(size.xz() / 2.0, 0.0),
+        round(size.xz() / 2.0 - size.y, size.y),
+    )
+}
+
+/// A funbox's top and sides, each face flat.
+fn funbox_mesh(size: Vec3) -> Mesh {
+    let (bottom, top) = funbox_corners(size);
+    let sides = (0..4).map(|i| {
+        let j = (i + 1) % 4;
+        [bottom[i], bottom[j], top[j], top[i]]
+    });
+    let positions: Vec<Vec3> = std::iter::once(top)
+        .chain(sides)
+        .flat_map(|[a, b, c, d]| [a, b, c, a, c, d])
+        .collect();
+    Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+    .with_computed_flat_normals()
 }
 
 /// Spawns props with shared materials.
@@ -144,6 +200,35 @@ impl Builder<'_, '_, '_> {
         ));
     }
 
+    /// A box `size` long (x), tall and deep (z), its bottom centred on `at`,
+    /// ramped at 45° on every side, with a bolt near each corner of its top.
+    fn funbox(&mut self, at: Vec3, size: Vec3, material: &Handle<StandardMaterial>) {
+        let (bottom, top) = funbox_corners(size);
+        let bolt = self
+            .meshes
+            .add(Extrusion::new(RegularPolygon::new(0.12, 6), 0.04));
+        let metal = self.metal.clone();
+        self.commands
+            .spawn((
+                Mesh3d(self.meshes.add(funbox_mesh(size))),
+                MeshMaterial3d(material.clone()),
+                Transform::from_translation(at),
+                RigidBody::Static,
+                Collider::convex_hull(&[bottom, top].concat()).expect("a funbox has volume"),
+            ))
+            .with_children(|funbox| {
+                for corner in top {
+                    let inward = Vec3::new(corner.x.signum(), 0.0, corner.z.signum()) * 0.6;
+                    funbox.spawn((
+                        Mesh3d(bolt.clone()),
+                        MeshMaterial3d(metal.clone()),
+                        Transform::from_translation(corner - inward)
+                            .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                    ));
+                }
+            });
+    }
+
     /// A board `size` across on two posts, facing south, its bottom edge
     /// `lift` above the ground at `at`. Returns it to print on.
     fn board(
@@ -179,15 +264,27 @@ impl Builder<'_, '_, '_> {
         self.commands.entity(block).add_child(words);
     }
 
-    /// Words painted on the ground, the top of their first line centred on
-    /// `at` (x, z).
-    fn paint(&mut self, text: Text, style: Style, at: Vec2, material: &Handle<StandardMaterial>) {
+    /// Words on a surface, placed and turned by `transform` (see `Words`).
+    fn write(
+        &mut self,
+        text: Text,
+        style: Style,
+        transform: Transform,
+        material: &Handle<StandardMaterial>,
+    ) {
         self.commands.spawn((
             Words { text, style },
             MeshMaterial3d(material.clone()),
-            Transform::from_xyz(at.x, 0.02, at.y).with_rotation(flat()),
+            transform,
             NotShadowCaster,
         ));
+    }
+
+    /// Words painted on the ground, the top of their first line centred on
+    /// `at` (x, z).
+    fn paint(&mut self, text: Text, style: Style, at: Vec2, material: &Handle<StandardMaterial>) {
+        let transform = Transform::from_xyz(at.x, 0.02, at.y).with_rotation(flat());
+        self.write(text, style, transform, material);
     }
 
     /// A purple pad `size` (x, z) across with its label on it. Rolling onto
@@ -236,6 +333,7 @@ fn spawn(
     commands: Commands,
     models: Res<Models>,
     pad: Res<PadLook>,
+    mut font: ResMut<Font>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -265,12 +363,9 @@ fn spawn(
     let short_name = |name: &str| Text::Same(name.rsplit('/').next().unwrap_or(name).to_owned());
 
     // Start: the name in letters to knock over, the title painted under them,
-    // and the profile links either side of the way north. Kenney's box has
-    // sloped ends; turned to run east-west.
-    let ledge = Transform::from_xyz(0.0, 0.0, 24.5)
-        .with_rotation(Quat::from_rotation_y(FRAC_PI_2))
-        .with_scale(Vec3::new(1.4, 2.2, 5.0));
-    b.prop(|m| &m.obstacle_box, ledge, hull.clone());
+    // and the profile links either side of the way north. Behind it, a
+    // funbox far enough back to stay out of the first view.
+    b.funbox(Vec3::new(0.0, 0.0, 25.5), Vec3::new(8.0, 0.6, 4.0), &accent);
     // Sized so the whole name fits a phone held upright (see `camera`).
     b.commands.spawn((
         Letters {
@@ -312,67 +407,81 @@ fn spawn(
     }
     b.zone(Spot::Start, Vec2::new(START.x, 21.5), Vec2::new(8.0, 7.0));
 
-    // Career line: a kicker per job or project, oldest in the west, with its
-    // name and dates painted in front and each new year before that.
+    // Career line: the pump track, with a table per job or project, oldest
+    // first. Each table has its dates and name on top, reading the way the
+    // track runs, and each new year is painted beside it in the loop's middle.
     let career = p.career();
-    let stops = career.len();
-    let spacing = (CAREER_LENGTH / stops as f32).min(MAX_CAREER_SPACING);
-    let first = -spacing * (stops - 1) as f32 / 2.0;
-    let path = Vec2::new(spacing * stops as f32 + 1.0, 5.0);
+    let track = PumpTrack::new(career.len());
+    let surface = track.mesh(palette::CONCRETE_DARK, palette::METAL);
     b.commands.spawn((
-        Mesh3d(b.meshes.add(Plane3d::new(Vec3::Y, path / 2.0))),
-        MeshMaterial3d(concrete_dark.clone()),
-        Transform::from_xyz(0.0, 0.005, CAREER_Z),
+        Surface,
+        Collider::trimesh_from_mesh_with_config(&surface, TrimeshFlags::FIX_INTERNAL_EDGES)
+            .expect("the track has triangles"),
+        Mesh3d(b.meshes.add(surface)),
+        MeshMaterial3d(matte(Color::WHITE)),
+        RigidBody::Static,
     ));
     b.paint(
         upper(&p.ui.experience),
         Style::new(0.8),
-        Vec2::new(0.0, -16.6),
+        Vec2::new(0.0, -17.7),
         &ink,
     );
+    b.paint(
+        p.plaza.pump_hint.clone(),
+        Style::new(0.26).width(4.8),
+        Vec2::new(0.0, -16.5),
+        &metal,
+    );
+    let across = pump_track::WIDTH - 0.6;
+    let top = track.table_top();
     let mut year = None;
     for (i, stop) in career.iter().enumerate() {
-        let x = first + i as f32 * spacing;
-        let kicker = Transform::from_xyz(x, 0.0, CAREER_Z)
-            .with_rotation(Quat::from_rotation_y(-FRAC_PI_2))
-            .with_scale(Vec3::new(2.2, 1.3, 1.8));
-        b.prop(|m| &m.ramp, kicker, hull.clone());
-        let width = spacing - 0.4;
-        b.paint(
+        let (table, direction) = track.table(i);
+        let ahead = Vec3::new(direction.x, 0.0, direction.y);
+        let reading = Quat::from_rotation_arc(Vec3::NEG_Z, ahead) * flat();
+        let on_top = |along: f32| {
+            Transform::from_translation(table + ahead * along + Vec3::Y * 0.01)
+                .with_rotation(reading)
+        };
+        b.write(
             signs::each(|lang| stop.period(&p, lang)),
-            Style::new(0.17).width(width).fit(),
-            Vec2::new(x, -21.1),
+            Style::new(0.16).width(across).fit(),
+            on_top(top / 2.0 - 0.1),
             &metal,
         );
         let name = stop
             .project
             .map_or(&stop.job.company, |project| &project.name);
-        b.paint(
+        b.write(
             name.clone(),
-            Style::new(0.22).width(width),
-            Vec2::new(x, -20.7),
+            Style::new(0.28).width(across).height(top - 0.6),
+            on_top(top / 2.0 - 0.45),
             &ink,
         );
         let started = stop.start().year;
         if year != Some(started) {
             year = Some(started);
-            b.paint(
+            let beside = track.beside(i);
+            b.write(
                 Text::Same(started.to_string()),
-                Style::new(0.5),
-                Vec2::new(x, -18.8),
+                Style::new(0.6).middle(),
+                Transform::from_xyz(beside.x, 0.02, beside.y).with_rotation(reading),
                 &accent,
             );
         }
-        // The zone takes in the words in front, and the card points above the kicker.
+        // A rider going past at speed only reads the table; slowing down on
+        // it brings up the card, which points above it.
         let zone = b.zone(
             Spot::Career(i),
-            Vec2::new(x, CAREER_Z + 1.4),
-            Vec2::new(spacing, 7.2),
+            table.xz(),
+            Vec2::new(track.pitch(), track.full_width()),
         );
         b.commands
             .entity(zone)
-            .insert(Card(Vec3::new(x, 1.4, CAREER_Z)));
+            .insert((Slow, Card(table + Vec3::Y)));
     }
+    b.commands.insert_resource(track);
 
     // Big gap: a kicker, a three-metre gap, a platform to land on, a ramp
     // down, and the highlights on boards along the far side.
@@ -416,20 +525,27 @@ fn spawn(
     b.zone(Spot::Gap, Vec2::new(15.5, gap_z), Vec2::new(16.0, 6.0));
 
     // Rail garden: a rail per open-source repo, with a pad for its code at
-    // the south end and one for its demo at the north end. Rails have no
-    // colliders: the board locks onto one from above (see `Rails::catch`) and
-    // rides through them on the ground rather than snagging.
+    // the south end and one for its demo at the north end. The board locks
+    // onto a rail from above (see `Rails::catch`); from the side, a wall under
+    // the bar stops it. The wall stays just below the bar's top, so a board
+    // grinding along the top doesn't scrape it.
     let rail_scale = Vec3::new(2.0, 2.0, 8.0);
     let rail_top = 0.25 * rail_scale.y;
     let rail_x = |i: usize| -25.0 + i as f32 * 2.5;
     let mut rails = Vec::new();
     for (i, repo) in p.open_source.iter().enumerate() {
         let at = Vec3::new(rail_x(i), 0.0, -12.0);
+        let wall = Vec3::new(0.11 * rail_scale.x, rail_top - 0.05, rail_scale.z);
         b.prop(
             |m| &m.rail_low,
             Transform::from_translation(at).with_scale(rail_scale),
             None,
         );
+        b.commands.spawn((
+            Transform::from_translation(at + Vec3::Y * wall.y / 2.0),
+            RigidBody::Static,
+            Collider::cuboid(wall.x, wall.y, wall.z),
+        ));
         let half = Vec3::Z * rail_scale.z / 2.0;
         rails.push(Rail {
             a: at - half + Vec3::Y * rail_top,
@@ -463,7 +579,7 @@ fn spawn(
 
     // Skill shop: a skate shop with a sign on the roof, a striped awning, a
     // window with boards on display, a door, a giant board leaning on the
-    // wall, and the skills on a menu board outside. Its front faces south.
+    // wall, and the skills on the ground outside. Its front faces south.
     let front = 4.75;
     b.block(Vec3::new(5.0, 3.0, 3.5), Vec3::new(-24.5, 0.0, 3.0), &paper);
     let sign = Vec3::new(3.4, 0.8, 0.15);
@@ -523,24 +639,51 @@ fn spawn(
     for x in [-25.3, -24.6, -23.9] {
         leaning_board(x, 1.6, None);
     }
-    let menu = Vec2::new(3.6, 3.0);
-    let menu_board = b.board(menu, Vec3::new(-19.0, 0.0, 3.4), 0.2, &ink);
-    let groups = signs::each(|lang| {
-        let names: Vec<_> = p.skills.iter().map(|group| group.name.get(lang)).collect();
-        names.join("\n")
-    });
-    b.print(
-        menu_board,
-        menu.extend(BOARD_DEPTH),
-        groups,
-        Style::new(0.15).width(menu.x - 0.4).height(menu.y - 0.5),
-        0.25,
+    // The skills, on grip tape on the ground in front of the shop and read
+    // from the south (see `skill_list`). Slowing down on them brings the
+    // camera round to look straight down at them, close enough to read.
+    let list = skill_list::lay_out(&mut font, &p.skills, YARD_DEPTH - 2.0 * YARD_MARGIN);
+    let grip = Vec2::new(list.width, list.height) + 2.0 * YARD_MARGIN;
+    let yard = Vec2::new(YARD_WEST + grip.x / 2.0, YARD_NORTH + grip.y / 2.0);
+    b.commands.spawn((
+        Mesh3d(b.meshes.add(Plane3d::new(Vec3::Y, grip / 2.0))),
+        MeshMaterial3d(ink.clone()),
+        Transform::from_xyz(yard.x, 0.01, yard.y),
+    ));
+    let lilac = matte(palette::ACCENT_LIGHT);
+    for block in &list.blocks {
+        let top = Vec2::new(YARD_WEST, YARD_NORTH) + YARD_MARGIN + Vec2::from(block.top);
+        b.paint(
+            block.heading.clone(),
+            skill_list::heading_style(),
+            top,
+            &lilac,
+        );
+        let list_top = top + Vec2::Y * block.list_below;
+        b.paint(
+            block.list.clone(),
+            skill_list::list_style(),
+            list_top,
+            &paper,
+        );
+    }
+    let south = YARD_NORTH + grip.y;
+    let zone = b.zone(
+        Spot::SkillShop,
+        Vec2::new(yard.x, (front + south) / 2.0),
+        Vec2::new(grip.x, south - front),
     );
-    // The card with the whole stack points at the top of the menu board.
-    let zone = b.zone(Spot::SkillShop, Vec2::new(-22.5, 8.0), Vec2::new(11.0, 9.0));
-    b.commands
-        .entity(zone)
-        .insert(Card(Vec3::new(-19.0, 0.2 + menu.y, 3.4)));
+    b.commands.entity(zone).insert((
+        Slow,
+        Frame {
+            centre: Vec3::new(yard.x, 0.0, yard.y),
+            across: Dir3::X,
+            up: Dir3::NEG_Z,
+            toward: Dir3::Y,
+            size: grip,
+            view: Vec2::new(skill_list::COLUMN + 0.8, 5.0),
+        },
+    ));
 
     // Phone booth: contact and CV. Its window faces the middle of the plaza.
     b.block(
@@ -708,14 +851,17 @@ fn spawn(
 }
 
 /// Keeps the zones the skater is in, most recently entered last, and tells
-/// the page about that one. Neighbouring zones touch, so the skater can be in two.
+/// the page about the latest one that counts at the skater's speed.
+/// Neighbouring zones touch, so the skater can be in two.
+#[allow(clippy::too_many_arguments)]
 fn track_zones(
     mut started: MessageReader<CollisionStart>,
     mut ended: MessageReader<CollisionEnd>,
-    zones: Query<&Zone>,
-    skaters: Query<(), With<Skater>>,
+    zones: Query<(&Zone, Has<Slow>)>,
+    skaters: Query<&LinearVelocity, With<Skater>>,
     mut in_zone: ResMut<InZone>,
     mut inside: Local<Vec<Entity>>,
+    mut slow: Local<bool>,
     mut shown: Local<Option<Spot>>,
 ) {
     let zone_of = |a: Entity, b: Entity| {
@@ -739,11 +885,17 @@ fn track_zones(
         }
     }
 
-    in_zone.0 = inside.last().copied();
+    let speed = skaters.single().map_or(0.0, |velocity| velocity.length());
+    *slow = speed < SLOW || (*slow && speed < FAST);
+    in_zone.0 = inside.iter().rev().copied().find(|&zone| {
+        zones
+            .get(zone)
+            .is_ok_and(|(_, needs_slow)| *slow || !needs_slow)
+    });
     let active = in_zone
         .0
         .and_then(|zone| zones.get(zone).ok())
-        .map(|zone| zone.0);
+        .map(|(zone, _)| zone.0);
     if active != *shown {
         *shown = active;
         match active {
@@ -770,5 +922,48 @@ fn place_card(
     if at != *placed {
         *placed = at;
         bridge::card(at);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::f32::consts::FRAC_PI_4;
+
+    use super::*;
+
+    /// The skills fit their patch of ground, clear of the way north from the
+    /// start.
+    #[test]
+    fn skills_fit_the_yard() {
+        let portfolio = content::load().unwrap();
+        let depth = YARD_DEPTH - 2.0 * YARD_MARGIN;
+        let list = skill_list::lay_out(&mut Font::default(), &portfolio.skills, depth);
+        assert!(list.height <= depth, "{} m deep", list.height);
+        let east = YARD_WEST + list.width + 2.0 * YARD_MARGIN;
+        assert!(east < -8.0, "reaches x = {east}");
+    }
+
+    /// Every face of a funbox faces out, and every side rises at 45°.
+    #[test]
+    fn funbox_ramps_at_45() {
+        let size = Vec3::new(8.0, 0.6, 4.0);
+        let mesh = funbox_mesh(size);
+        let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
+        let normals = mesh.attribute(Mesh::ATTRIBUTE_NORMAL).unwrap();
+        let (Some(positions), Some(normals)) = (positions.as_float3(), normals.as_float3()) else {
+            panic!("positions and normals are 3D");
+        };
+        let middle = Vec3::Y * size.y / 2.0;
+        for (triangle, normals) in positions.chunks(3).zip(normals.chunks(3)) {
+            let centre = triangle.iter().map(|&p| Vec3::from(p)).sum::<Vec3>() / 3.0;
+            let normal = Vec3::from(normals[0]);
+            assert!(normal.dot(centre - middle) > 0.0, "{normal} faces in");
+            if normal.y < 0.99 {
+                assert!(
+                    (normal.y - FRAC_PI_4.cos()).abs() < 1e-5,
+                    "{normal} isn't 45°"
+                );
+            }
+        }
     }
 }

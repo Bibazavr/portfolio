@@ -12,8 +12,10 @@ mod loading;
 mod og_image;
 mod palette;
 mod plaza;
+mod pump_track;
 mod signs;
 mod skater;
+mod skill_list;
 mod spots;
 mod text_mesh;
 
@@ -24,12 +26,14 @@ use bevy::{asset::AssetMetaCheck, prelude::*};
 const MAX_PIXEL_RATIO: f32 = 2.0;
 
 /// Trigger zones sit on their own layer: only the skater sets them off, and
-/// the skater's ground probe looks past them.
+/// the skater's ground probe looks past them. The fences around the plaza
+/// have one too, so the camera looks past them.
 #[derive(PhysicsLayer, Default)]
 enum Layer {
     #[default]
     Default,
     Zone,
+    Fence,
 }
 
 fn main() {

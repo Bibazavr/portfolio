@@ -80,7 +80,7 @@
 </section>
 {%- endfor %}
 
-<section class="panel wide" data-spot="{{ self.id(content::Spot::SkillShop) }}" data-card data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="skills-{{ lang }}" hidden>
+<section class="panel" data-spot="{{ self.id(content::Spot::SkillShop) }}" data-lang="{{ lang }}" lang="{{ lang }}" aria-labelledby="skills-{{ lang }}" hidden>
 	<h2 id="skills-{{ lang }}">{{ self.t(p.ui.skills) }}</h2>
 	<div class="deck">
 		{%- for group in p.skills %}

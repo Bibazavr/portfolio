@@ -1,6 +1,6 @@
-//! The plaza itself: a concrete slab, ledges around the edge, the halfpipe,
-//! benches and a parked car, under a low afternoon sun. The portfolio spots
-//! live in `spots`.
+//! The plaza itself: a concrete slab, ledges around the edge with unseen
+//! fences above them, the halfpipe, benches and a parked car, under a low
+//! afternoon sun. The portfolio spots live in `spots`.
 
 use std::f32::consts::{FRAC_PI_2, PI};
 
@@ -8,16 +8,24 @@ use avian3d::prelude::*;
 use bevy::{light::CascadeShadowConfigBuilder, prelude::*};
 
 use crate::{
+    Layer,
     assets::{self, Models},
     loading::Phase,
     palette,
 };
 
-/// Half the side of the square plaza, in metres.
-const HALF_SIZE: f32 = 30.0;
+/// The plaza's edges, in metres: 60 across, and 70 from south to north, the
+/// last ten making room for the pump track.
+pub const WEST: f32 = -30.0;
+pub const EAST: f32 = 30.0;
+pub const NORTH: f32 = -40.0;
+pub const SOUTH: f32 = 30.0;
 /// Kenney's halfpipe pieces are one metre across and 0.8 m tall; at this size
 /// the walls are 2 m high, which a pushed skater clears with air to spare.
 const HALFPIPE_SCALE: f32 = 2.5;
+/// The fences on the ledges reach this high, above anything the skater can
+/// jump: a pushed air out of the halfpipe goes about eight metres up.
+const FENCE_HEIGHT: f32 = 20.0;
 
 pub fn plugin(app: &mut App) {
     app.insert_resource(ClearColor(palette::SKY))
@@ -59,21 +67,25 @@ fn spawn(
     };
 
     // A thick ground slab, so a fast body can't tunnel through it.
-    let side = HALF_SIZE * 2.0;
+    let (across, deep) = (EAST - WEST, SOUTH - NORTH);
+    let (middle_x, middle_z) = ((EAST + WEST) / 2.0, (SOUTH + NORTH) / 2.0);
     block(
         &mut commands,
-        Vec3::new(side, 1.0, side),
-        Vec3::new(0.0, -0.5, 0.0),
+        Vec3::new(across, 1.0, deep),
+        Vec3::new(middle_x, -0.5, middle_z),
         &concrete,
     );
 
     // Ledges along the edge keep the skater on the plaza.
-    let edge = Vec3::new(side + 1.0, 0.6, 1.0);
+    let (along_x, along_z) = (
+        Vec3::new(across + 1.0, 0.6, 1.0),
+        Vec3::new(1.0, 0.6, deep + 1.0),
+    );
     for (size, x, z) in [
-        (edge, 0.0, -HALF_SIZE),
-        (edge, 0.0, HALF_SIZE),
-        (edge.zyx(), -HALF_SIZE, 0.0),
-        (edge.zyx(), HALF_SIZE, 0.0),
+        (along_x, middle_x, NORTH),
+        (along_x, middle_x, SOUTH),
+        (along_z, WEST, middle_z),
+        (along_z, EAST, middle_z),
     ] {
         block(
             &mut commands,
@@ -81,6 +93,14 @@ fn spawn(
             Vec3::new(x, size.y / 2.0, z),
             &concrete_dark,
         );
+        // An ollie clears a ledge; the fence above it doesn't let it off.
+        let fence = size.with_y(FENCE_HEIGHT);
+        commands.spawn((
+            Transform::from_xyz(x, size.y + fence.y / 2.0, z),
+            RigidBody::Static,
+            Collider::cuboid(fence.x, fence.y, fence.z),
+            CollisionLayers::new(Layer::Fence, Layer::Default),
+        ));
     }
 
     // The halfpipe: two quarter pipes, three pieces wide, facing across a flat.

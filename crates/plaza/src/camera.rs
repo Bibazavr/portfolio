@@ -1,4 +1,5 @@
-//! A third-person camera that trails the skater.
+//! A third-person camera that trails the skater, and comes round to face
+//! a spot with a lot to read while the skater lingers there.
 
 use avian3d::prelude::*;
 use bevy::{
@@ -9,7 +10,7 @@ use bevy::{
     window::PrimaryWindow,
 };
 
-use crate::{Layer, palette, skater::Skater};
+use crate::{Layer, palette, skater::Skater, spots::InZone};
 
 /// Where the camera sits relative to the skater: above and behind.
 const OFFSET: Vec3 = Vec3::new(0.0, 3.2, 6.5);
@@ -31,10 +32,53 @@ const MAX_FOV: f32 = 80f32.to_radians();
 /// camera also trails farther back, up to `MAX_REACH` times as far.
 const NARROW_ASPECT: f32 = 0.75;
 const MAX_REACH: f32 = 1.5;
+/// How quickly the camera comes round to a `Frame` and back.
+const FRAME_RATE: f32 = 3.0;
 
 /// How much farther than `OFFSET` the camera trails.
 #[derive(Component)]
 pub struct Reach(f32);
+
+/// An area for the camera to face while the skater is in the zone that has
+/// it, close enough to read what's on it, following the skater across it.
+#[derive(Component, Clone, Copy)]
+pub struct Frame {
+    /// The middle of the area.
+    pub centre: Vec3,
+    /// The area's own right and up, as it's read.
+    pub across: Dir3,
+    pub up: Dir3,
+    /// From the area toward where the camera looks at it from.
+    pub toward: Dir3,
+    /// The area's size, across and up.
+    pub size: Vec2,
+    /// The least of it to show at once, so that it stays big enough to read.
+    pub view: Vec2,
+}
+
+impl Frame {
+    /// Where the camera goes to show the part of the area around `skater`,
+    /// the point it looks at, and which way is up.
+    fn shot(&self, lens: &PerspectiveProjection, skater: Vec3) -> (Vec3, Vec3, Vec3) {
+        let half_tan = Vec2::new(lens.aspect_ratio, 1.0) * (lens.fov / 2.0).tan();
+        let distance = (self.view / 2.0 / half_tan).max_element();
+        // Keep the view on the area, if it's bigger than the view.
+        let room = (self.size / 2.0 - half_tan * distance).max(Vec2::ZERO);
+        let from_centre = skater - self.centre;
+        let along = Vec2::new(from_centre.dot(*self.across), from_centre.dot(*self.up));
+        let along = along.clamp(-room, room);
+        let focus = self.centre + self.across * along.x + self.up * along.y;
+        (focus + self.toward * distance, focus, *self.up)
+    }
+}
+
+/// The last shot of a `Frame`, and how far round to it the camera is, from
+/// 0 trailing the skater to 1 facing it.
+#[derive(Default)]
+pub struct Framing {
+    shot: Option<(Vec3, Vec3, Vec3)>,
+    blend: f32,
+}
 
 pub fn plugin(app: &mut App) {
     app.add_systems(Startup, spawn)
@@ -74,14 +118,18 @@ fn spawn(mut commands: Commands) {
     ));
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn follow(
     time: Res<Time>,
     spatial: SpatialQuery,
     bodies: Query<&RigidBody>,
+    in_zone: Res<InZone>,
+    frames: Query<&Frame>,
     skater: Single<&Transform, (With<Skater>, Without<Camera3d>)>,
-    camera: Single<(&mut Transform, &Reach), With<Camera3d>>,
+    camera: Single<(&mut Transform, &Reach, &Projection), With<Camera3d>>,
+    mut framing: Local<Framing>,
 ) {
-    let (mut camera, reach) = camera.into_inner();
+    let (mut camera, reach, projection) = camera.into_inner();
     let (yaw, _, _) = skater.rotation.to_euler(EulerRot::YXZ);
     let offset = OFFSET * Vec3::new(1.0, 1.0, reach.0);
     let eye = skater.translation + Vec3::Y * LOOK_AT_HEIGHT;
@@ -97,8 +145,26 @@ pub fn follow(
             target = eye + direction * (hit.distance - CLEARANCE).max(MIN_DISTANCE);
         }
     }
+
+    // Come round to a frame, and back to trailing after.
+    let frame = in_zone.get().and_then(|zone| frames.get(zone).ok());
+    if let (Some(frame), Projection::Perspective(lens)) = (frame, projection) {
+        framing.shot = Some(frame.shot(lens, skater.translation));
+    }
+    let facing = if frame.is_some() { 1.0 } else { 0.0 };
+    framing
+        .blend
+        .smooth_nudge(&facing, FRAME_RATE, time.delta_secs());
+    let (mut look, mut up) = (eye, Vec3::Y);
+    if let Some((at, focus, frame_up)) = framing.shot {
+        let t = framing.blend * framing.blend * (3.0 - 2.0 * framing.blend);
+        target = target.lerp(at, t);
+        look = eye.lerp(focus, t);
+        // Turned to the frame's own up, a view straight down stays square.
+        up = up.lerp(frame_up, t);
+    }
     camera
         .translation
         .smooth_nudge(&target, DECAY_RATE, time.delta_secs());
-    camera.look_at(eye, Vec3::Y);
+    camera.look_at(look, up);
 }

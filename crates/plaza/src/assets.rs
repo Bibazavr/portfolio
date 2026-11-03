@@ -29,9 +29,7 @@ pub fn plugin(app: &mut App) {
         "models/bench.glb",
         "models/character-skate-boy.glb",
         "models/half-pipe.glb",
-        "models/obstacle-box.glb",
         "models/rail-low.glb",
-        "models/ramp.glb",
         "models/skateboard.glb",
         "models/steps.glb",
         "models/vehicle.glb",
@@ -47,12 +45,8 @@ pub struct Models {
     pub character: Handle<WorldAsset>,
     #[asset(path = "embedded://models/half-pipe.glb#Scene0")]
     pub half_pipe: Handle<WorldAsset>,
-    #[asset(path = "embedded://models/obstacle-box.glb#Scene0")]
-    pub obstacle_box: Handle<WorldAsset>,
     #[asset(path = "embedded://models/rail-low.glb#Scene0")]
     pub rail_low: Handle<WorldAsset>,
-    #[asset(path = "embedded://models/ramp.glb#Scene0")]
-    pub ramp: Handle<WorldAsset>,
     #[asset(path = "embedded://models/skateboard.glb#Scene0")]
     pub skateboard: Handle<WorldAsset>,
     #[asset(path = "embedded://models/steps.glb#Scene0")]

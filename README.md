@@ -41,9 +41,15 @@ Links sit on purple pads. While the skater is on one, Bevy offers the link throu
 Each spot is also a trigger zone. Bevy reports the spot the skater is in, and the page shows that
 spot's panel: plain HTML generated from `portfolio.ron` (`crates/classic/templates/panels.html`),
 in both languages, announced to screen readers and shown to keyboard users who Tab into it. The
-career stops and the skill shop have more to say than fits on a sign, so their panels float as a
-card over the spot, at the point Bevy projects to the screen as the camera moves. Spot and panel
-names come from `content::Spot`, so both sides agree. The touch stick is HTML too and passes its
+career stops have more to say than fits on a table, so their panels float as a card over the
+table, at the point Bevy projects to the screen as the camera moves. They sit in a row on the pump
+track, so a card only opens once the skater slows down on its table; riding past, the table tops
+say what and when.
+
+The skills are written out in full on the ground in front of the skill shop, in balanced columns
+laid out once for whichever language needs more room (`crates/plaza/src/skill_list.rs`). Slowing
+down on them brings the camera round to look straight down, close enough to read, following the
+skater across. Spot and panel names come from `content::Spot`, so both sides agree. The touch stick is HTML too and passes its
 position to Bevy through the WASM export `set_stick`.
 
 ## Live stats
@@ -64,8 +70,18 @@ node scripts/update-stats.mjs
 WASD or arrows to skate and Space to ollie; on touch screens, the stick and the ollie button.
 The skater turns forward to kick-push up to top speed, coasts a little, and pushes again; on
 narrow screens the camera trails farther back, and it comes in front of walls rather than lose the
-skater behind them. The board rolls up ramps and back down fakie, gets air out of the halfpipe (turning around in the
-air), and locks onto a rail when it comes down on one. Ollies, airs, gaps and grinds score points.
+skater behind them. Unseen fences above the edge ledges keep an ollie from leaving the plaza.
+The board rolls up ramps and back down fakie, gets air out of the halfpipe (turning around in the
+air), and locks onto a rail when it comes down on one; from the side, the rails stop it. Ollies,
+airs, gaps and grinds score points.
+
+The career line is a pump track (`crates/plaza/src/pump_track.rs`): a loop at the north end of
+the plaza, which is ten metres deeper than it is wide to fit it, generated as one mesh. A table per
+job or project runs round it, oldest first: east along the south straight, round a banked berm and
+back west along the north one, with a pair of rollers in any slot left over. On it, holding forward
+pumps instead of pushing: speed comes from riding down the far side of each table and roller. The
+board keeps to the surface over the tables' edges, and a rider who lets go of the steering is
+carried round the loop.
 Sound is synthesised in the page with Web Audio, so there are no audio files; it starts after the
 first tap or key press, as browsers require, and the speaker button mutes it.
 

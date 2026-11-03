@@ -30,7 +30,8 @@ impl Default for Font {
 pub struct Style {
     /// The height of a capital letter.
     pub size: f32,
-    /// Lines wrap at word boundaries to stay within this.
+    /// Lines wrap at word boundaries to stay within this, and the text gets
+    /// smaller when a word alone is wider.
     pub max_width: f32,
     /// The text gets smaller until its lines fit in this.
     pub max_height: f32,
@@ -38,6 +39,8 @@ pub struct Style {
     fit: bool,
     /// Centred on y = 0 rather than hanging from it.
     middle: bool,
+    /// Lines start at the left of `max_width` rather than being centred.
+    left: bool,
 }
 
 impl Style {
@@ -48,6 +51,7 @@ impl Style {
             max_height: f32::INFINITY,
             fit: false,
             middle: false,
+            left: false,
         }
     }
 
@@ -70,31 +74,22 @@ impl Style {
         self.middle = true;
         self
     }
+
+    pub const fn left(mut self) -> Self {
+        self.left = true;
+        self
+    }
 }
 
 impl Font {
-    /// Flat text in the XY plane, facing +Z: lines centred on x = 0, the
-    /// first line's capitals hanging from y = 0 (or the block centred on it).
+    /// Flat text in the XY plane, facing +Z: lines centred on x = 0 (or
+    /// starting at the left of the width), the first line's capitals hanging
+    /// from y = 0 (or the block centred on it).
     pub fn flat(&mut self, text: &str, style: Style) -> Mesh {
-        let mut size = style.size;
-        let height = |lines: usize, size: f32| size + (lines - 1) as f32 * LINE_PITCH * size;
-        let lines = if style.fit {
-            let width = self.width(text) * size / CAP_HEIGHT;
-            if width > style.max_width {
-                size *= style.max_width / width;
-            }
-            vec![text.to_owned()]
-        } else {
-            let mut lines = self.wrap(text, size, style.max_width);
-            while height(lines.len(), size) > style.max_height && size > style.size / 2.0 {
-                size *= 0.95;
-                lines = self.wrap(text, size, style.max_width);
-            }
-            lines
-        };
+        let (lines, size) = self.set(text, style);
         let em = size / CAP_HEIGHT;
         let top = if style.middle {
-            height(lines.len(), size) / 2.0
+            block_height(lines.len(), size) / 2.0
         } else {
             0.0
         };
@@ -105,7 +100,11 @@ impl Font {
             else {
                 continue;
             };
-            let x = -mesh.bbox.max.x * em / 2.0;
+            let x = if style.left {
+                -style.max_width / 2.0
+            } else {
+                -mesh.bbox.max.x * em / 2.0
+            };
             let baseline = top - size - row as f32 * LINE_PITCH * size;
             positions.extend(
                 mesh.vertices
@@ -124,6 +123,35 @@ impl Font {
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
         .with_inserted_indices(indices)
+    }
+
+    /// How tall `flat` makes `text`, from the top of the first line's
+    /// capitals to the last line's baseline.
+    pub fn height(&mut self, text: &str, style: Style) -> f32 {
+        let (lines, size) = self.set(text, style);
+        block_height(lines.len(), size)
+    }
+
+    /// Breaks `text` into lines and settles its size as `style` asks.
+    fn set(&mut self, text: &str, style: Style) -> (Vec<String>, f32) {
+        let mut size = style.size;
+        if style.fit {
+            let width = self.width(text) * size / CAP_HEIGHT;
+            if width > style.max_width {
+                size *= style.max_width / width;
+            }
+            return (vec![text.to_owned()], size);
+        }
+        let mut lines = self.wrap(text, size, style.max_width);
+        // A word wider than the width gets a line to itself, still too wide.
+        while size > style.size / 2.0
+            && (block_height(lines.len(), size) > style.max_height
+                || self.widest(&lines) * size / CAP_HEIGHT > style.max_width)
+        {
+            size *= 0.95;
+            lines = self.wrap(text, size, style.max_width);
+        }
+        (lines, size)
     }
 
     /// One solid letter with capitals `size` tall, `depth` thick and centred
@@ -179,11 +207,24 @@ impl Font {
         lines
     }
 
+    /// The widest of `lines`, in ems.
+    fn widest(&mut self, lines: &[String]) -> f32 {
+        lines
+            .iter()
+            .map(|line| self.width(line))
+            .fold(0.0, f32::max)
+    }
+
     /// Width in ems.
     fn width(&mut self, text: &str) -> f32 {
         TextSection::<MeshText>::generate_section(&mut self.0, text, true, None)
             .map_or(0.0, |mesh| mesh.bbox.max.x)
     }
+}
+
+/// From the top of the first line's capitals to the last line's baseline.
+fn block_height(lines: usize, size: f32) -> f32 {
+    size + lines.saturating_sub(1) as f32 * LINE_PITCH * size
 }
 
 #[cfg(test)]

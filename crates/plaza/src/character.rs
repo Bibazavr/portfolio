@@ -1,7 +1,8 @@
 //! What the skater looks like: Kenney's skater kid standing sideways on a
 //! board, leaning into the surface it rides, with an animation for each move.
 //! Kenney's skate animations stand side-on and look along the board, except
-//! the push, which faces forward; the kid turns between the two.
+//! the push, which faces forward; the kid turns between the two. Grinding and
+//! pumping share a crouch.
 
 use std::{
     f32::consts::{FRAC_PI_2, PI},
@@ -13,7 +14,7 @@ use bevy::{prelude::*, world_serialization::WorldInstanceReady};
 use crate::{
     assets::Models,
     loading::Phase,
-    skater::{self, Board, HEIGHT, Motion, Skater},
+    skater::{self, Board, HEIGHT, Motion, Pump, Skater},
 };
 
 /// Kenney's kid is 0.78 m tall; this makes them about 1.2 m.
@@ -31,10 +32,10 @@ enum Pose {
     Stand,
     Push,
     Air,
-    Grind,
+    Crouch,
 }
 
-const POSES: [Pose; 4] = [Pose::Stand, Pose::Push, Pose::Air, Pose::Grind];
+const POSES: [Pose; 4] = [Pose::Stand, Pose::Push, Pose::Air, Pose::Crouch];
 
 impl Pose {
     /// Which way the kid faces, turned about Y from facing along the board.
@@ -94,7 +95,7 @@ fn spawn(
         Pose::Stand => models.skate_stand.clone(),
         Pose::Push => models.skate.clone(),
         Pose::Air => models.skate_air.clone(),
-        Pose::Grind => models.crouch.clone(),
+        Pose::Crouch => models.crouch.clone(),
     });
     let (graph, nodes) = AnimationGraph::from_clips(clips);
     commands.insert_resource(Poses {
@@ -152,8 +153,9 @@ fn start_animation(
 fn pose(board: &Board) -> Pose {
     match board.motion {
         Motion::Rolling if board.pushing => Pose::Push,
+        Motion::Rolling if board.pump == Pump::Absorb => Pose::Crouch,
         Motion::Rolling => Pose::Stand,
-        Motion::Grinding(_) => Pose::Grind,
+        Motion::Grinding(_) => Pose::Crouch,
         Motion::Air(_) => Pose::Air,
     }
 }

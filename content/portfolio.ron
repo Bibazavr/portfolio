@@ -452,6 +452,8 @@
         stairs_repo: "Bibazavr/leetcode-rust",
         egg_title: (en: "You found the sticker!", ru: "Стикер найден!"),
         egg_body: (en: "Bibacode is my Telegram channel.", ru: "Bibacode — мой Telegram-канал."),
+        // Painted by the pump track, where the career line is.
+        pump_hint: (en: "Hold forward to pump round the loop. Slow down on a table to read more.", ru: "Жмите вперёд — и качайте по кругу. Притормозите на столе, чтобы прочитать подробнее."),
         ollie: (en: "Ollie", ru: "Олли"),
         score: (en: "Score", ru: "Очки"),
         sound_off: (en: "Turn sound off", ru: "Выключить звук"),

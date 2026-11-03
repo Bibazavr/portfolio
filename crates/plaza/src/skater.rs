@@ -1,6 +1,6 @@
 //! The skater: pushes, carves and ollies, rolls up ramps and back down fakie,
-//! gets air out of the halfpipe and grinds rails. Arcade handling, tuned to be
-//! fun for half a minute rather than realistic.
+//! gets air out of the halfpipe, grinds rails and pumps round the pump track.
+//! Arcade handling, tuned to be fun for half a minute rather than realistic.
 
 use std::f32::consts::PI;
 
@@ -11,6 +11,7 @@ use crate::{
     Layer, bridge,
     input::SkaterInput,
     loading::Phase,
+    pump_track::{PumpTrack, Surface},
     spots::{self, Rails},
 };
 
@@ -34,10 +35,35 @@ const GRIND_REACH: f32 = 0.5;
 const MIN_GRIND_SPEED: f32 = 3.0;
 /// A landing this far from the takeoff counts as a gap.
 const GAP_DISTANCE: f32 = 3.5;
+/// Below this, the skater has somehow left the plaza and goes back to the start.
+const FELL_OFF: f32 = -5.0;
+/// On the pump track, holding the push pumps instead above this speed:
+/// speed comes from riding down the far side of each table and roller,
+/// `PUMP` times the slope, up to top speed.
+const PUMP_FROM: f32 = 3.0;
+const PUMP: f32 = 25.0;
+/// Going down a slope steeper than this, the rider stands up to press.
+const PRESS_SLOPE: f32 = 0.05;
+/// How quickly the pump track turns a rider who lets go of the stick to run
+/// along it, and how much it turns them back toward its middle line, per
+/// metre off it and at most.
+const GUIDE_RATE: f32 = 6.0;
+const CENTRING: f32 = 0.3;
+const MAX_CENTRING: f32 = 0.35;
+/// Steering less than this, as a touch stick pushed nearly straight up does,
+/// counts as letting go.
+const LET_GO: f32 = 0.5;
 
 const RADIUS: f32 = 0.3;
 pub const HEIGHT: f32 = 1.2;
 const HALF_HEIGHT: f32 = HEIGHT / 2.0;
+/// The ground probe's sphere, a little smaller than the capsule's end.
+const PROBE_RADIUS: f32 = RADIUS * 0.9;
+/// The ground is under the board when the probe meets it within this.
+const PROBE_REACH: f32 = 0.15;
+/// On the pump track, the board keeps to the surface from this far above
+/// it, so it rolls over a table's edge rather than off it.
+const SNAP_REACH: f32 = 0.5;
 
 #[derive(Component)]
 pub struct Skater;
@@ -50,6 +76,17 @@ pub struct Board {
     pub normal: Vec3,
     /// Speeding up with a foot on the ground.
     pub pushing: bool,
+    pub pump: Pump,
+}
+
+/// Pumping the pump track: crouching over the tops, then standing up to
+/// press the board down the far side, which is where the speed comes from.
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub enum Pump {
+    #[default]
+    Off,
+    Absorb,
+    Press,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -156,18 +193,46 @@ impl TrickKind {
 pub fn plugin(app: &mut App) {
     app.add_message::<Trick>()
         .add_systems(OnEnter(Phase::Playing), spawn)
-        .add_systems(FixedUpdate, skate.run_if(in_state(Phase::Playing)));
+        .add_systems(
+            FixedUpdate,
+            (skate, back_to_start).run_if(in_state(Phase::Playing)),
+        );
+}
+
+/// The fences keep the skater on the plaza; if anything still lets them
+/// fall through, they start again rather than fall for ever.
+fn back_to_start(
+    mut skaters: Query<
+        (
+            &mut Board,
+            &mut Position,
+            &mut Rotation,
+            &mut LinearVelocity,
+            &mut GravityScale,
+        ),
+        With<Skater>,
+    >,
+) {
+    for (mut board, mut position, mut rotation, mut velocity, mut gravity) in &mut skaters {
+        if position.y < FELL_OFF {
+            *board = Board::default();
+            position.0 = spots::START + Vec3::Y * HALF_HEIGHT;
+            rotation.0 = Quat::IDENTITY;
+            velocity.0 = Vec3::ZERO;
+            gravity.0 = 1.0;
+        }
+    }
 }
 
 pub fn spawn(mut commands: Commands) {
     // The ground probe: a sphere at the capsule's lower end, cast down.
     let probe = ShapeCaster::new(
-        Collider::sphere(RADIUS * 0.9),
+        Collider::sphere(PROBE_RADIUS),
         Vec3::NEG_Y * (HALF_HEIGHT - RADIUS),
         Quat::IDENTITY,
         Dir3::NEG_Y,
     )
-    .with_max_distance(0.15)
+    .with_max_distance(SNAP_REACH)
     .with_query_filter(SpatialQueryFilter::from_mask(Layer::Default));
 
     commands.spawn((
@@ -200,10 +265,13 @@ type Body = (
     &'static ShapeHits,
 );
 
+#[allow(clippy::too_many_arguments)]
 fn skate(
     time: Res<Time>,
     mut input: ResMut<SkaterInput>,
     rails: Res<Rails>,
+    track: Option<Res<PumpTrack>>,
+    surfaces: Query<(), With<Surface>>,
     mut tricks: MessageWriter<Trick>,
     mut skaters: Query<Body, With<Skater>>,
 ) {
@@ -214,17 +282,22 @@ fn skate(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs();
-    let ground = hits
-        .iter()
-        .find(|hit| hit.normal1.y > 0.3)
+    let floor = hits.iter().find(|hit| hit.normal1.y > 0.3);
+    let ground = floor
+        .filter(|hit| hit.distance <= PROBE_REACH)
         .map(|hit| hit.normal1);
+    // On the pump track, how far the board is above the surface.
+    let on_track = floor
+        .filter(|hit| surfaces.contains(hit.entity))
+        .map(|hit| (hit.normal1, hit.distance));
     let forward = (rotation.0 * Vec3::NEG_Z)
         .with_y(0.0)
         .normalize_or(Vec3::NEG_Z);
 
     let was_pushing = std::mem::take(&mut board.pushing);
+    board.pump = Pump::Off;
     board.motion = match board.motion {
-        Motion::Rolling => match ground {
+        Motion::Rolling => match ground.or(on_track.map(|(normal, _)| normal)) {
             // Rolled off an edge or over a lip.
             None => Motion::Air(Air::new(now, position.0, false, board.normal, velocity.0)),
             Some(normal) if input.ollie.take().is_some() => {
@@ -235,11 +308,29 @@ fn skate(
             }
             Some(normal) => {
                 board.normal = normal;
+                // Over a table's edge, come down onto the surface beyond it.
+                if let Some((_, above)) = on_track {
+                    let gap = (RADIUS - PROBE_RADIUS) / normal.y;
+                    position.y -= (above - gap).max(0.0);
+                }
                 // Roll along the surface in the direction the board faces.
                 // Speed is signed, so going up a ramp and back down is fakie.
                 let along = (forward - normal * forward.dot(normal)).normalize_or(forward);
                 let mut speed = velocity.dot(along);
-                board.pushing = input.throttle > 0.0
+                let pumping = on_track.is_some() && input.throttle > 0.0 && speed > PUMP_FROM;
+                let downhill = (-along.y).max(0.0);
+                if pumping {
+                    board.pump = if downhill > PRESS_SLOPE {
+                        Pump::Press
+                    } else {
+                        Pump::Absorb
+                    };
+                    if speed < TOP_SPEED {
+                        speed += input.throttle * PUMP * downhill * dt;
+                    }
+                }
+                board.pushing = !pumping
+                    && input.throttle > 0.0
                     && speed < TOP_SPEED
                     && (was_pushing || speed < TOP_SPEED - COAST);
                 if board.pushing {
@@ -250,7 +341,11 @@ fn skate(
                 }
                 speed = toward_zero(speed, ROLLING_DRAG * dt).clamp(-MAX_SPEED, MAX_SPEED);
                 velocity.0 = along * speed;
-                spin.0 = Vec3::Y * input.steer * TURN_RATE;
+                let guided = on_track
+                    .zip(track.as_deref())
+                    .filter(|_| input.steer.abs() < LET_GO)
+                    .and_then(|(_, track)| guide(track, position.0, forward, speed));
+                spin.0 = Vec3::Y * guided.unwrap_or(input.steer * TURN_RATE);
                 Motion::Rolling
             }
         },
@@ -324,6 +419,27 @@ fn skate(
             }
         }
     };
+}
+
+/// The yaw rate that keeps a board at `at`, facing `forward` and rolling at
+/// `speed`, running along the pump track and drifting back to its middle.
+/// `None` when the board faces across the track rather than along it.
+fn guide(track: &PumpTrack, at: Vec3, forward: Vec3, speed: f32) -> Option<f32> {
+    let place = track.place(at.xz())?;
+    let heading = forward.xz().normalize_or_zero();
+    let ahead = place.direction.dot(heading);
+    if ahead.abs() < 0.5 {
+        return None;
+    }
+    // The track's way in the direction the board faces, and the board's
+    // nose turned toward the middle line, or its tail when rolling fakie.
+    let way = place.direction * ahead.signum();
+    let back = (place.out * CENTRING).clamp(-MAX_CENTRING, MAX_CENTRING) * speed.signum();
+    let target = (way - place.outward * back).normalize();
+    // Positive yaw turns left; anticlockwise round the loop turns left.
+    let error = (-heading.perp_dot(target)).atan2(heading.dot(target));
+    let follow = speed * ahead.signum() * place.curvature;
+    Some(follow + GUIDE_RATE * error)
 }
 
 fn toward_zero(value: f32, amount: f32) -> f32 {

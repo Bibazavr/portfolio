@@ -415,6 +415,8 @@ pub struct PlazaText {
     pub stairs_repo: String,
     pub egg_title: Text,
     pub egg_body: Text,
+    /// Painted by the pump track, where the career line is.
+    pub pump_hint: Text,
     /// The touch ollie button.
     pub ollie: Text,
     pub score: Text,
